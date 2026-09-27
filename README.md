@@ -7,6 +7,7 @@ self-contained project: its own toolchain, its own build command, its own
 | Project | What it is | Build |
 |---|---|---|
 | [`flipper/`](flipper/) | Flipper Zero apps (`.fap`, C, ufbt) | `cd flipper/apps/<app> && ufbt` |
+| [`aio-board/`](aio-board/) | AIO Board V1.4 expansion hardware (ESP32-S2, CC1101, nRF24) | firmware TBD; hardware canon only |
 
 ## Adding a project
 

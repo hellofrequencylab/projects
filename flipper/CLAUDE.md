@@ -72,3 +72,10 @@ One directory per app under `apps/`, each with its own `application.fam`.
 `appid` must be unique across the device. To add an icon, put a 10x10 1-bit PNG
 next to the source and set `fap_icon=` — a wrong-format PNG fails the build,
 so add it as its own change.
+
+## When the AIO Board V1.4 is attached
+
+Read [`../aio-board/CLAUDE.md`](../aio-board/CLAUDE.md) before designing any
+app that uses the expansion board. Three of its constraints change app design,
+not just wiring: only one radio is active at a time (hardware mux on the front
+switch), the ESP32-S2 has no Bluetooth, and the CC1101 is 433 MHz only.

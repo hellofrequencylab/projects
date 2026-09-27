@@ -7,6 +7,7 @@ over anything here.
 | Working in… | Read first |
 |---|---|
 | `flipper/` | [`flipper/CLAUDE.md`](flipper/CLAUDE.md) — Flipper Zero / ufbt. Non-negotiable: the SDK is the source of truth, not your training data. |
+| `aio-board/` | [`aio-board/CLAUDE.md`](aio-board/CLAUDE.md) — AIO Board V1.4. Hardware facts read off the physical board; one radio at a time, no Bluetooth. |
 | a new project | [`_template/CLAUDE.md`](_template/CLAUDE.md), then `README.md` → "Adding a project" |
 
 ## Rules that hold everywhere
