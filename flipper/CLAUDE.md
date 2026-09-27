@@ -51,6 +51,31 @@ not find it, it does not exist — say so instead of guessing a near-miss name.
 - `stack_size` in `application.fam` is per-app and real. Deep recursion or big
   stack buffers will overflow it silently-ish.
 
+## Host setup (verified on macOS Intel, 2026-09-27)
+
+**Do not use Homebrew on this machine.** Intel x86_64 is Homebrew Tier 3 as of
+2026: no bottles, everything builds from source, and the host Command Line
+Tools are missing C++ headers (`fatal error: 'cstdint' file not found`), so
+those source builds fail. None of that blocks ufbt, which cross-compiles with
+a toolchain it downloads itself.
+
+Use a venv:
+
+    python3 -m venv ~/.venvs/flipper
+    source ~/.venvs/flipper/bin/activate
+    pip install ufbt esptool certifi
+
+**Python needs a CA bundle or every ufbt download fails** with
+`CERTIFICATE_VERIFY_FAILED` — macOS Python does not read the system keychain.
+These lines are appended to `~/.venvs/flipper/bin/activate` so activating the
+venv is enough:
+
+    export SSL_CERT_FILE="$(python -c 'import certifi; print(certifi.where())' 2>/dev/null)"
+    export REQUESTS_CA_BUNDLE="$SSL_CERT_FILE"
+
+Confirmed working: SDK **1.4.3**, target **f7**, API **87.1**, `darwin-x86_64`
+toolchain downloads and builds cleanly.
+
 ## Build / run loop
 
     cd apps/<app>
