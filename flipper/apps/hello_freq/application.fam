@@ -1,0 +1,11 @@
+App(
+    appid="hello_freq",
+    name="Hello Freq",
+    apptype=FlipperAppType.EXTERNAL,
+    entry_point="hello_freq_app",
+    stack_size=1 * 1024,
+    fap_category="Misc",
+    fap_description="Minimal ViewPort app: draws text, exits on Back.",
+    fap_author="hellofrequencylab",
+    fap_version=(1, 0),
+)

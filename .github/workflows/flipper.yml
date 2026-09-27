@@ -1,0 +1,40 @@
+name: "flipper: build and lint"
+
+# Path-filtered: touching another project must not run this.
+on:
+  push:
+    paths: ["flipper/**", ".github/workflows/flipper.yml"]
+  pull_request:
+    paths: ["flipper/**", ".github/workflows/flipper.yml"]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # Add each new app here.
+        app: [hello_freq]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build ${{ matrix.app }}
+        id: build
+        uses: flipperdevices/flipperzero-ufbt-action@v0.1
+        with:
+          # Must match the channel pinned in flipper/CLAUDE.md.
+          sdk-channel: release
+          app-dir: flipper/apps/${{ matrix.app }}
+
+      - name: Lint ${{ matrix.app }}
+        uses: flipperdevices/flipperzero-ufbt-action@v0.1
+        with:
+          skip-setup: true
+          task: lint
+          app-dir: flipper/apps/${{ matrix.app }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.app }}-${{ steps.build.outputs.suffix }}
+          path: ${{ steps.build.outputs.fap-artifacts }}
+          if-no-files-found: error

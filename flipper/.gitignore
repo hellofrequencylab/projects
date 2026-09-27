@@ -1,0 +1,9 @@
+# ufbt build output and local SDK state
+dist/
+build/
+.ufbt/
+*.fap
+*.fal
+.env
+.vscode/
+compile_commands.json
