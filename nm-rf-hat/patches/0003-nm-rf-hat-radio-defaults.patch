@@ -1,0 +1,25 @@
+diff --git a/src/core/configPins.h b/src/core/configPins.h
+index d1a3650..fe36331 100644
+--- a/src/core/configPins.h
++++ b/src/core/configPins.h
+@@ -227,7 +227,10 @@ public:
+     // RF
+     int rfTx = GROVE_SDA;
+     int rfRx = GROVE_SCL;
+-    int rfModule = M5_RF_MODULE;
++    // nm-rf-hat: default to the modules actually on the board so the RF (sub-GHz)
++    // and RFID (NFC) apps work without menu-diving. Pins already come from the
++    // board .ini (CC1101 CS=27/GDO0=22, PN532 on I2C 27/22).
++    int rfModule = CC1101_SPI_MODULE;
+     float rfFreq = 433.92;
+     int rfFxdFreq = 1;
+     int rfScanRange = 3;
+@@ -236,7 +239,7 @@ public:
+     int iButton = 0;
+ 
+     // RFID
+-    int rfidModule = M5_RFID2_MODULE;
++    int rfidModule = PN532_I2C_MODULE;
+ 
+     // GPS
+     int gpsBaudrate = 9600;
