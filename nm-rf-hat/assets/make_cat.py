@@ -1,0 +1,237 @@
+#!/usr/bin/env python3
+"""Generate the boot-screen cat sprite for nm-rf-hat.
+
+Original pixel art ("Cosmo", a chonky orange tabby in shades) defined below as
+a character grid + palette. Running this script deterministically regenerates:
+
+  cat_sprite.h       RGB565 array for TFT_eSPI (0xF81F = transparent)
+  cat_preview.png    the sprite alone, 3x upscaled for viewing
+  scene_preview.png  320x240 mock of the whole boot screen
+
+Usage (from anywhere):
+  .venv/bin/python assets/make_cat.py
+Requires Pillow.
+"""
+
+import os
+import random
+
+from PIL import Image, ImageDraw, ImageFont
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+
+SCALE = 3  # integer nearest-neighbour upscale from grid to device pixels
+
+# fmt: off
+GRID = [
+    "..................................................",
+    "...Y..............................................",
+    "...Y......KK......................KK..............",
+    ".YYWYY....KOK....................KOK..............",
+    "...Y......KPOK..................KOPK..............",
+    "...Y.....KOPPOK................KOPPOK.............",
+    ".........KOPPPOK..............KOPPPOK.............",
+    ".........KOPPPPOKKKKKKKKKKKKKKOPPPPOK.............",
+    ".........KOOPPPOOOOoOOooOOoOOOOPPPOOK.............",
+    "........KOOOPOOOOOOoOOooOOoOOOOOOPOOOK.Y..........",
+    "........KOOOOOOOOOOOOOooOOOOOOOOOOOOOKYWY.........",
+    ".......KOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOKY..........",
+    "......KOOOSSSSSSSSSSSSSSSSSSSSSSSSSSOOOK..........",
+    "......KooOSSSWSSSSSSOOOOOOSSSWSSSSSOooK...........",
+    "......KOOOOSWSSSSSSOOOOOOOOSWSSSSSSOOOOK..........",
+    "......KooOOOSSSSSOOOOOOOOOOOOSSSSSOOOooK...KKKK...",
+    "......KOPPPOOOOOOCCCCPPPPCCCCOOOOOOPPPOK..KOOooK..",
+    "......KOPPPOOOOOCCCCCCPPCCCKCCOOOOOPPPOK..KOKKOOK.",
+    "......KOOOOOOOOCCCCKCCKKCCKCCCCOOOOOOOOK..KK..KOOK",
+    "......KOOOOOOOOOCCCCKKCCKKCCCCOOOOOOOOOK......KoOK",
+    "......KOOOOOOOOOOOCCCCCCCCCCOOOOOOOOOOOK......KOOK",
+    "......KOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOK......KOoK",
+    "......KoOOOOOOOOOOCCCCCCCCCCOOOOOOOOOOoK......KOOK",
+    "......KooOOOOOOOCCCCCCCCCCCCCCOOOOOOOooK.....KOoOK",
+    "......KoOOOOOOOOCCCCCCCCCCCCCCOOOOOOOOoK....KOOOK.",
+    ".......KOOOOOOOOCCCCCCCCCCCCCCOOOOOOOOK.KKKKOoOK..",
+    ".......KoOOOOOOOCCCCCCCCCCCCCCOOOOOOOOKKOOOOOOK...",
+    "........KooOOOOOCCCCCCCCCCCCCCOOOOOooOOOOoOOKK....",
+    ".........KOOOOOOCCCCCCCCCCCCCCOOOOOOKKKKKKKK......",
+    "..........KOOOOKKKKCCCCCCCCKKKKOOOOK..............",
+    "...........KOOKCCCCKCCCCCCKCCCCKOOK...............",
+    "............KKKCCKCKKKKKKKKCKCCKKK................",
+    "...............KKKK........KKKK...................",
+    "..................................................",
+    "..................................................",
+    "..................................................",
+]
+# fmt: on
+
+# char -> (R, G, B); '.' is transparent
+PALETTE = {
+    "K": (0x3A, 0x1C, 0x3E),  # outline: deep plum (visible-ish on black)
+    "O": (0xFF, 0xA8, 0x40),  # fur: warm orange
+    "o": (0xD8, 0x68, 0x20),  # tabby stripes
+    "C": (0xFF, 0xEC, 0xC8),  # cream muzzle / belly / paws
+    "P": (0xFF, 0x8C, 0xB4),  # pink: ears, nose, blush
+    "S": (0x10, 0x10, 0x20),  # sunglasses
+    "W": (0xFF, 0xFF, 0xFF),  # white glint
+    "Y": (0xFF, 0xF0, 0x60),  # sparkle yellow
+}
+
+TRANSPARENT = 0xF81F
+BG_PREVIEW = (0x14, 0x10, 0x24)  # backdrop for cat_preview.png only
+
+
+def rgb565(rgb):
+    r, g, b = rgb
+    return ((r & 0xF8) << 8) | ((g & 0xFC) << 3) | (b >> 3)
+
+
+def rgb565_to_rgb888(v):
+    r = (v >> 11) & 0x1F
+    g = (v >> 5) & 0x3F
+    b = v & 0x1F
+    return ((r << 3) | (r >> 2), (g << 2) | (g >> 4), (b << 3) | (b >> 2))
+
+
+def trimmed_grid():
+    """Validate the grid and trim fully-transparent border rows/cols."""
+    width = len(GRID[0])
+    for i, row in enumerate(GRID):
+        assert len(row) == width, f"row {i} has length {len(row)}, expected {width}"
+        for c in row:
+            assert c == "." or c in PALETTE, f"row {i}: unknown char {c!r}"
+    rows = [r for r in GRID]
+    while rows and set(rows[0]) == {"."}:
+        rows.pop(0)
+    while rows and set(rows[-1]) == {"."}:
+        rows.pop()
+    cols = [x for x in range(width) if any(r[x] != "." for r in rows)]
+    x0, x1 = cols[0], cols[-1] + 1
+    return [r[x0:x1] for r in rows]
+
+
+def build_pixels(grid):
+    """Return (w, h, list of RGB565 values) after SCALE upscaling."""
+    gw, gh = len(grid[0]), len(grid)
+    w, h = gw * SCALE, gh * SCALE
+    lut = {c: rgb565(v) for c, v in PALETTE.items()}
+    for c, v in lut.items():
+        assert v != TRANSPARENT, f"palette colour {c!r} collides with transparency key"
+    lut["."] = TRANSPARENT
+    px = []
+    for gy in range(gh):
+        line = []
+        for gx in range(gw):
+            line.extend([lut[grid[gy][gx]]] * SCALE)
+        for _ in range(SCALE):
+            px.extend(line)
+    assert len(px) == w * h
+    return w, h, px
+
+
+def write_header(w, h, px, path):
+    out = []
+    out.append("// Generated by make_cat.py — do not edit")
+    out.append("// Original pixel-art cat for the nm-rf-hat boot screen.")
+    out.append("#pragma once")
+    out.append("#include <stdint.h>")
+    out.append("")
+    out.append(f"#define CAT_W {w}")
+    out.append(f"#define CAT_H {h}")
+    out.append("#define CAT_TRANSPARENT 0xF81F   // magenta key; pixels with this value are not drawn")
+    out.append("")
+    out.append("static const uint16_t cat_sprite[CAT_W * CAT_H] = {")
+    for y in range(h):
+        row = px[y * w:(y + 1) * w]
+        for i in range(0, w, 12):
+            out.append("    " + ", ".join(f"0x{v:04X}" for v in row[i:i + 12]) + ",")
+    out.append("};")
+    out.append("")
+    with open(path, "w", encoding="utf-8") as f:
+        f.write("\n".join(out))
+
+
+def sprite_image(w, h, px):
+    """RGBA image of the sprite exactly as the TFT will show it (RGB565-quantised)."""
+    img = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    data = []
+    for v in px:
+        if v == TRANSPARENT:
+            data.append((0, 0, 0, 0))
+        else:
+            data.append(rgb565_to_rgb888(v) + (255,))
+    img.putdata(data)
+    return img
+
+
+def find_font(size):
+    candidates = [
+        "/System/Library/Fonts/Supplemental/Arial Black.ttf",
+        "/System/Library/Fonts/Supplemental/Arial Bold.ttf",
+        "/System/Library/Fonts/Helvetica.ttc",
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+    ]
+    for p in candidates:
+        if os.path.exists(p):
+            return ImageFont.truetype(p, size)
+    return ImageFont.load_default()
+
+
+def write_scene(sprite, path):
+    SW, SH = 320, 240
+    scene = Image.new("RGB", (SW, SH), (0, 0, 0))
+    d = ImageDraw.Draw(scene)
+
+    rng = random.Random(0xCA7)  # deterministic starfield
+    star_cols = [(255, 255, 255), (255, 250, 200), (200, 200, 220), (255, 240, 150)]
+    for _ in range(30):
+        x, y = rng.randrange(4, SW - 4), rng.randrange(4, SH - 4)
+        col = rng.choice(star_cols)
+        kind = rng.random()
+        if kind < 0.45:
+            d.point((x, y), fill=col)
+        elif kind < 0.75:
+            d.rectangle((x, y, x + 1, y + 1), fill=col)
+        else:  # little + cross
+            d.point((x, y), fill=col)
+            for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                d.point((x + dx, y + dy), fill=col)
+
+    cx = (SW - sprite.width) // 2
+    cy = 40
+    scene.paste(sprite, (cx, cy), sprite)
+
+    # Caption "PussyPower" + superscript TM, centred as one unit.
+    green = rgb565_to_rgb888(0x07E0)
+    font = find_font(34)
+    tm_font = find_font(12)
+    text, tm = "PussyPower", "TM"
+    tb = d.textbbox((0, 0), text, font=font)
+    mb = d.textbbox((0, 0), tm, font=tm_font)
+    tw, th = tb[2] - tb[0], tb[3] - tb[1]
+    mw = mb[2] - mb[0]
+    gap = 2
+    total = tw + gap + mw
+    x = (SW - total) // 2
+    y_top = cy + sprite.height + 6
+    d.text((x - tb[0], y_top - tb[1]), text, font=font, fill=green)
+    d.text((x + tw + gap - mb[0], y_top - mb[1]), tm, font=tm_font, fill=green)
+    scene.save(path)
+
+
+def main():
+    grid = trimmed_grid()
+    w, h, px = build_pixels(grid)
+    write_header(w, h, px, os.path.join(HERE, "cat_sprite.h"))
+
+    sprite = sprite_image(w, h, px)
+    prev = Image.new("RGB", (w, h), BG_PREVIEW)
+    prev.paste(sprite, (0, 0), sprite)
+    prev = prev.resize((w * 3, h * 3), Image.NEAREST)
+    prev.save(os.path.join(HERE, "cat_preview.png"))
+
+    write_scene(sprite, os.path.join(HERE, "scene_preview.png"))
+    colours = sorted({v for v in px if v != TRANSPARENT})
+    print(f"CAT_W={w} CAT_H={h} pixels={w*h} bytes={w*h*2} colours={len(colours)}")
+
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,171 @@
+diff --git a/src/main.cpp b/src/main.cpp
+index 162127d..483d6e8 100644
+--- a/src/main.cpp
++++ b/src/main.cpp
+@@ -282,6 +282,137 @@ void boot_screen() {
+     ); // will draw outside the screen on non touch devices
+ }
+ 
++#if defined(BOOT_CAT_SCENE) && !defined(LITE_VERSION)
++/*********************************************************************
++ **  "Cat in space" boot scene (nm-rf-hat patch 0002)
++ **  Replaces the stock logo animation when there is no custom boot
++ **  image. Sprite comes from nm-rf-hat/assets/, copied in by build.sh.
++ *********************************************************************/
++#include "nm_assets/cat_sprite.h"
++
++#define CAT_SCENE_STARS 30
++#define CAT_SCENE_TWINKLE_MS 130
++#define CAT_SCENE_TWINKLE_PER_TICK 3
++
++struct CatStar {
++    int16_t x, y;
++    bool cross;  // 5 px '+' instead of a 1 px dot
++    bool yellow; // pale yellow instead of white
++    bool lit;
++};
++
++struct CatScene {
++    CatStar stars[CAT_SCENE_STARS];
++    uint8_t count;
++    uint32_t rng;
++    uint32_t lastTwinkle;
++};
++
++static uint32_t catRand(CatScene &s) {
++    s.rng = s.rng * 1664525u + 1013904223u; // Numerical Recipes LCG, fixed seed => same sky every boot
++    return s.rng >> 16;
++}
++
++static bool catRectHit(int x, int y, int rx, int ry, int rw, int rh) {
++    // star footprint is the 5x5 box around (x, y)
++    return x + 2 >= rx && x - 2 < rx + rw && y + 2 >= ry && y - 2 < ry + rh;
++}
++
++static void catDrawStar(const CatStar &st) {
++    uint16_t bright = st.yellow ? 0xFFF5 : TFT_WHITE; // pale yellow = (255,255,170)
++    uint16_t dim = st.yellow ? 0x5286 : 0x4208;       // same hue, ~1/3 brightness
++    if (st.cross) {
++        uint16_t arm = st.lit ? bright : TFT_BLACK; // dim cross collapses to a dim centre dot
++        tft.drawFastHLine(st.x - 2, st.y, 5, arm);
++        tft.drawFastVLine(st.x, st.y - 2, 5, arm);
++        tft.drawPixel(st.x, st.y, st.lit ? bright : dim);
++    } else {
++        tft.drawPixel(st.x, st.y, st.lit ? bright : dim);
++    }
++}
++
++// Draws the whole scene once. Owns the full panel, including the touch footer.
++static void catSceneBegin(CatScene &s) {
++    const int W = tft.width();
++    const int H = tft.height(); // full panel; tftHeight excludes the 20 px touch footer
++
++    // Caption (+ optional superscript "TM") measured as one unit so it stays centred.
++    const String caption = BOOT_TAGLINE;
++#ifdef BOOT_TRADEMARK
++    tft.setTextSize(1);
++    const int tmW = tft.textWidth("TM", 1);
++#else
++    const int tmW = 0;
++#endif
++    uint8_t capSize = 3;
++    tft.setTextSize(capSize);
++    int capW = tft.textWidth(caption, 1);
++    if (capW + tmW > W - 8) {
++        capSize = 2;
++        tft.setTextSize(capSize);
++        capW = tft.textWidth(caption, 1);
++    }
++    const int capH = 8 * capSize; // GLCD font 1 is 8 px tall per size step
++    const int gap = 8;
++
++    int catX = (W - CAT_W) / 2;
++    int catY = 40;
++    if (catY + CAT_H + gap + capH > H) catY = H - CAT_H - gap - capH;
++    if (catY < 0) catY = 0;
++    if (catX < 0) catX = 0;
++    const int capX = (W - (capW + tmW)) / 2;
++    const int capY = catY + CAT_H + gap;
++
++    tft.fillScreen(TFT_BLACK); // wipes boot_screen()'s title/version/footer text
++
++    // Stars at fixed pseudo-random spots, never inside the cat or caption boxes.
++    s.rng = 0xCA7F00Du;
++    s.count = 0;
++    for (int tries = 0; tries < 400 && s.count < CAT_SCENE_STARS; tries++) {
++        int x = 2 + (int)(catRand(s) % (uint32_t)(W - 4));
++        int y = 2 + (int)(catRand(s) % (uint32_t)(H - 4));
++        if (catRectHit(x, y, catX - 3, catY - 3, CAT_W + 6, CAT_H + 6)) continue;
++        if (catRectHit(x, y, capX - 3, capY - 3, capW + tmW + 6, capH + 6)) continue;
++        CatStar &st = s.stars[s.count++];
++        uint32_t r = catRand(s);
++        st.x = x;
++        st.y = y;
++        st.cross = (r & 3) == 0; // ~1 in 4 is a cross
++        st.yellow = (r & 4) != 0;
++        st.lit = (r & 8) != 0 || st.cross;
++        catDrawStar(st);
++    }
++
++    // Sprite array is native little-endian RGB565, so TFT_eSPI must swap bytes on push
++    // (with swap on, pushImage compares the transparent key without swapping it).
++    bool swap = tft.getSwapBytes();
++    tft.setSwapBytes(true);
++    tft.pushImage(catX, catY, CAT_W, CAT_H, cat_sprite, (uint16_t)CAT_TRANSPARENT);
++    tft.setSwapBytes(swap);
++
++    tft.setTextColor(bruceConfig.priColor, TFT_BLACK);
++    tft.setTextSize(capSize);
++    tft.drawCentreString(caption, capX + capW / 2, capY, 1);
++#ifdef BOOT_TRADEMARK
++    tft.setTextSize(1);
++    tft.drawCentreString("TM", capX + capW + tmW / 2, capY, 1); // superscript: top-aligned
++#endif
++
++    s.lastTwinkle = millis();
++}
++
++// Toggles a few stars; redraws only those pixels, never the whole screen.
++static void catSceneTick(CatScene &s) {
++    if (s.count == 0 || millis() - s.lastTwinkle < CAT_SCENE_TWINKLE_MS) return;
++    s.lastTwinkle = millis();
++    for (int k = 0; k < CAT_SCENE_TWINKLE_PER_TICK; k++) {
++        CatStar &st = s.stars[catRand(s) % s.count];
++        st.lit = !st.lit;
++        catDrawStar(st);
++    }
++}
++#endif
++
+ /*********************************************************************
+  **  Function: boot_screen_anim
+  **  Draw boot screen
+@@ -292,6 +423,10 @@ void boot_screen_anim() {
+     // checks for boot.jpg in SD and LittleFS for customization
+     int boot_img = 0;
+     bool drawn = false;
++#if defined(BOOT_CAT_SCENE) && !defined(LITE_VERSION)
++    CatScene cat;
++    bool catStarted = false;
++#endif
+     if (sdcardMounted) {
+         if (SD.exists("/boot.jpg")) boot_img = 1;
+         else if (SD.exists("/boot.gif")) boot_img = 3;
+@@ -334,7 +469,16 @@ void boot_screen_anim() {
+             }
+             drawn = true;
+         }
+-#if !defined(LITE_VERSION)
++#if defined(BOOT_CAT_SCENE) && !defined(LITE_VERSION)
++        // Same slot as the stock logo: starts at 2 s, runs to the 7 s timeout.
++        if (!boot_img && (millis() - i > 2000)) {
++            if (!catStarted) {
++                catSceneBegin(cat);
++                catStarted = true;
++            }
++            catSceneTick(cat);
++        }
++#elif !defined(LITE_VERSION)
+         if (!boot_img && (millis() - i > 2200) && (millis() - i) < 2700)
+             tft.drawRect(2 * tftWidth / 3, tftHeight / 2, 2, 2, bruceConfig.priColor);
+         if (!boot_img && (millis() - i > 2700) && (millis() - i) < 2900)

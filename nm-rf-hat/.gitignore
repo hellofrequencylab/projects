@@ -1,0 +1,4 @@
+.bruce/
+.venv/
+build/
+build.log
