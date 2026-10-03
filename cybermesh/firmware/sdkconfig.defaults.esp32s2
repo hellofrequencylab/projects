@@ -1,0 +1,2 @@
+# AIO Board: the S2's only USB is native, so the console goes over USB CDC.
+CONFIG_ESP_CONSOLE_USB_CDC=y
