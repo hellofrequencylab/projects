@@ -1,0 +1,34 @@
+name: "cybermesh: core tests and firmware build"
+
+# Path-filtered: touching another project must not run this.
+on:
+  push:
+    paths: ["cybermesh/**", ".github/workflows/cybermesh.yml"]
+  pull_request:
+    paths: ["cybermesh/**", ".github/workflows/cybermesh.yml"]
+
+jobs:
+  core:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Host tests (sanitizers on)
+        run: make -C cybermesh/core test
+
+  firmware:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # esp32 = CYD (nm-rf-hat), esp32s2 = AIO Board
+        target: [esp32, esp32s2]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build ${{ matrix.target }}
+        uses: espressif/esp-idf-ci-action@v1
+        with:
+          # Must match the version pinned in cybermesh/CLAUDE.md.
+          esp_idf_version: v6.0.3
+          target: ${{ matrix.target }}
+          path: cybermesh/firmware
+          command: ./build.sh ${{ matrix.target }}

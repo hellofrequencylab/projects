@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CyberMesh</title>
+<style>
+:root { --bg:#f6f7f9; --card:#fff; --ink:#15181d; --dim:#5f6b7a; --line:#dde2e8; --acc:#0b7a55; }
+@media (prefers-color-scheme: dark) { :root { --bg:#0f1216; --card:#181c22; --ink:#e7ebf0; --dim:#8d99a8; --line:#2a3039; --acc:#3ccf98; } }
+* { box-sizing: border-box; }
+body { margin:0; background:var(--bg); color:var(--ink); font:16px/1.45 system-ui, sans-serif; }
+main { max-width: 640px; margin: 0 auto; padding: 16px; }
+h1 { font-size: 1.3rem; margin: 0; }
+.meta { color: var(--dim); font-size: .85rem; margin: 2px 0 16px; }
+form { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 12px; }
+textarea { width: 100%; min-height: 80px; resize: vertical; font: inherit; color: inherit; background: transparent; border: 0; outline: 0; }
+.row { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; }
+button { font: inherit; background: var(--acc); color: #fff; border: 0; border-radius: 8px; padding: 8px 16px; }
+button:disabled { opacity: .5; }
+.note { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; margin-top: 10px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.note small { display: block; color: var(--dim); margin-top: 4px; }
+.warn { color: var(--dim); font-size: .8rem; margin-top: 18px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>CyberMesh</h1>
+  <div class="meta" id="meta">connecting…</div>
+  <form id="f">
+    <textarea id="t" maxlength="200" placeholder="Write a note. It spreads to every box in range."></textarea>
+    <div class="row"><span class="meta" id="c">0 / 200 bytes</span><button id="b" disabled>Post</button></div>
+  </form>
+  <div id="list"></div>
+  <p class="warn">Floor v0 test network: notes are public, unsigned and can't be deleted.</p>
+</main>
+<script>
+const enc = new TextEncoder();
+const $ = (id) => document.getElementById(id);
+function bytes() { return enc.encode($('t').value.trim()).length; }
+$('t').addEventListener('input', () => {
+  const n = bytes(); $('c').textContent = n + ' / 200 bytes'; $('b').disabled = n === 0 || n > 200;
+});
+$('f').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const text = $('t').value.trim();
+  if (!text || bytes() > 200) return;
+  $('b').disabled = true;
+  const r = await fetch('/api/notes?t=' + Date.now(), { method: 'POST', body: text });
+  if (r.ok) { $('t').value = ''; $('c').textContent = '0 / 200 bytes'; }
+  else alert('Not posted: ' + (await r.text()));
+  $('b').disabled = false;
+  load();
+});
+async function load() {
+  try {
+    const d = await (await fetch('/api/notes')).json();
+    $('meta').textContent = 'box ' + d.node + ' · ' + d.neighbors + ' box(es) heard · ' + d.notes.length + ' notes';
+    d.notes.sort((a, b) => b.seq - a.seq);
+    const list = $('list'); list.textContent = '';
+    for (const n of d.notes) {
+      const el = document.createElement('div'); el.className = 'note'; el.textContent = n.text;
+      const s = document.createElement('small');
+      s.textContent = 'from box ' + n.author + ' · ' + (n.t ? new Date(n.t).toLocaleString() : 'time unknown');
+      el.appendChild(s); list.appendChild(el);
+    }
+  } catch (e) { $('meta').textContent = 'box unreachable'; }
+}
+load(); setInterval(load, 3000);
+</script>
+</body>
+</html>

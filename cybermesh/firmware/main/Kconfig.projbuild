@@ -1,0 +1,9 @@
+menu "CyberMesh"
+    config CM_CHANNEL
+        int "Network-wide Wi-Fi channel (floor v0 uses 1)"
+        range 1 11
+        default 1
+        help
+            ESP-NOW and the phone hotspot share this channel. Every box in a
+            mesh must use the same one. See docs/spec-floor-v0.md.
+endmenu
