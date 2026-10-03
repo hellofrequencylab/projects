@@ -9,7 +9,7 @@ self-contained project: its own toolchain, its own build command, its own
 | [`flipper/`](flipper/) | Flipper Zero apps (`.fap`, C, ufbt) | `cd flipper/apps/<app> && ufbt` |
 | [`aio-board/`](aio-board/) | AIO Board V1.4 expansion hardware (ESP32-S2, CC1101, nRF24) | firmware TBD; hardware canon only |
 | [`nm-rf-hat/`](nm-rf-hat/) | Custom Bruce firmware for CYD (ESP32-2432S028) + NM-RF-HAT | `cd nm-rf-hat && ./build.sh` |
-| [`cybermesh/`](cybermesh/) | Mesh system across the repo's devices (brainstorm) | none yet; stack undecided |
+| [`cybermesh/`](cybermesh/) | World-wide emergency mesh; floor v0 on ESP32 (ESP-NOW + captive portal) | `make -C cybermesh/core test`; `cybermesh/firmware/build.sh esp32` |
 
 ## Adding a project
 
