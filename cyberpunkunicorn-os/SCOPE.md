@@ -58,7 +58,7 @@ out (LoRa, Ethernet, FM are already hidden in the menu but still compiled in).
 | Battery (DIP 6) | no sense pin wired in Bruce | **Power** — only if a battery ADC pin exists *(verify)* | new, maybe |
 | Wi-Fi | — | WiFi (Bruce) | exists |
 | Bluetooth LE | — | BLE (Bruce) | exists |
-| ESP-NOW | — | **Sensors** receiver (reuse Bruce `core/connect`) | new |
+| ESP-NOW | — | **Sensors** receiver (own callback; coexists with Bruce `core/connect` by being modal) | built, untested |
 | Display + touch | — | system | exists |
 | RGB LED | 4/16/17 *(verify)*, disabled in Bruce's CYD build | **LED** | new (enable `HAS_RGB_LED` or drive directly) |
 | Light sensor (LDR) | GPIO34 *(verify)* | **Light** meter | new |
@@ -66,26 +66,36 @@ out (LoRa, Ethernet, FM are already hidden in the menu but still compiled in).
 | microSD | SPI + CS5 | Files (Bruce) | exists; card currently not mounting (fake 2 TB card) |
 | BOOT button | GPIO0 | system | exists |
 | USB serial | — | CLI (Bruce) | exists |
-| Grove/JST ports on hat & CYD | mostly 22/27 *(verify each)* | **Sensors** (wired) | new |
+| Grove/JST ports on hat & CYD | mostly 22/27 *(verify each)* | **Sensors** (wired I2C) | built, untested |
 | Free GPIO | 35 (in) *(verify)* | **GPIO** (Bruce has `gpio` serial cmds) | add on-screen app |
 
 ## External sensors — the platform piece
 
-Two paths, likely both:
+Built 2026-10-19 as the **Sensors** app (`apps/sensors/`, see CLAUDE.md "Our
+apps"); not yet tested on hardware. Both paths share one list on screen:
 
-1. **Wired (I2C on the Grove port, 27/22).** A **Sensors** app: scan the bus
-   (Bruce already has `i2c_finder`), auto-recognise known chips (e.g. BME280,
-   SHT3x, BH1750 — Bruce links `lewisxhe/SensorLib`), show live readings, log
-   to SD/LittleFS. Works alongside the PN532; not while an SPI radio is in use.
-2. **Wireless sensor nodes.** Our own ESP32 boards (the `aio-board/` ESP32-S2 is a
-   candidate) send readings to the CYD over **ESP-NOW** (no router needed;
-   Bruce already uses ESP-NOW for device-to-device file sharing). Same Sensors
-   app shows them. Optional later: 433 MHz off-the-shelf weather sensors via the
-   CC1101.
+1. **Wired (I2C on the Grove port, SDA 27 / SCL 22).** Scans the bus, recognises
+   chips by address + ID register, reads them with our own register-level drivers
+   (Bruce 1.16.1 doesn't link SensorLib, so nothing was added): BME280/BMP280
+   (0x76/77), SHT3x (0x44/45), AHT2x (0x38), BH1750 (0x23/5C), SGP30 (0x58),
+   MPU6050/6500/9250 (0x68/69), INA219 (0x40-4F, assumes a 0.1 ohm shunt).
+   Other addresses get a "maybe X" name (OLED, ADS1115, SCD4x, ...). Works
+   alongside the PN532 (DIP 3); refused while the CC1101/nRF24 is on.
+   **Altimeter** view (replaces the CircuitPython launcher's): relative altitude
+   from any pressure reading, zeroable.
+2. **Wireless sensor nodes over ESP-NOW.** The contract is
+   `apps/sensors/sensor_packet.h` (28-byte versioned packet: magic, version, node
+   id, type, float value, unit, battery %, sequence, 12-char name), documented in
+   `apps/sensors/PROTOCOL.md` with a minimal node sketch. Node firmware will be
+   its own project directory (the `aio-board/` ESP32-S2 is a candidate) and
+   copies the header unchanged. Optional later: 433 MHz off-the-shelf weather
+   sensors via the CC1101.
 
-A small, documented message format (sensor id, type, value, unit, battery)
-shared by the hub and the node firmware is the contract between them. Node
-firmware would be its own project directory.
+Logging: CSV every 10 s to SD when mounted, else LittleFS (capped + rotated).
+CLI: `sensors`, `sensors scan`, `sensors listen [s]`, `sensors log on|off`.
+
+Next: a node project; drivers for SCD4x (true CO2) and BME680 if wanted;
+optional background logging (today it logs only while a Sensors screen is open).
 
 ## Frequency (loyalty RFID)
 
@@ -104,7 +114,7 @@ firmware would be its own project directory.
 2. **Hat** app (module probe) — every other app depends on knowing what's live.
 3. **Frequency** (scan first, then program).
 4. Onboard extras: **LED**, **Light**, **Sound** (verify pins first).
-5. **Sensors**: I2C wired first, then ESP-NOW + first sensor-node project.
+5. **Sensors**: I2C wired + ESP-NOW receiver built (untested); next the first sensor-node project.
 6. Trim unused Bruce modules as flash runs out.
 
 ## Open questions
