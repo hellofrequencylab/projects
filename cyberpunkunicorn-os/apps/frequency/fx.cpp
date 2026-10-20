@@ -2,20 +2,34 @@
 
 #include "../boot/unicorn_sprite.h"
 #include "../ui/rainbow.h"
+#include "../ui/scene.h"
 #include <globals.h>
 #include <math.h>
 
 namespace freq {
 
+namespace {
+uint8_t wavePrev[3][320]; // last frame's ribbon row per column, 0xFF = none
+} // namespace
+
+void fxWaveReset() { memset(wavePrev, 0xFF, sizeof(wavePrev)); }
+
 void fxWave(int x, int y, int w, int h, int t) {
-    const int mid = y + h / 2, amp = h / 2 - 3;
+    const int mid = h / 2, amp = h / 2 - 3;
+    w = min(w, 320);
     for (int i = 0; i < w; i++) {
-        tft.drawFastVLine(x + i, y, h, bruceConfig.bgColor);
         for (int k = 0; k < 3; k++) {
+            uint8_t &prev = wavePrev[k][i];
+            if (prev != 0xFF) tft.drawFastVLine(x + i, y + prev - 1, 3, cyberSkyAt(y + prev));
             float f = 0.045f + k * 0.03f;
             float a = amp * (0.55f + 0.45f * sinf(t * 0.05f + k * 2.1f));
             int py = mid + (int)(a * sinf(i * f + t * (0.18f + k * 0.07f) + k * 2.0f));
-            tft.fillRect(x + i, py - 1, 1, 3, cyberHue(i * 2 + t * 6 + k * 120));
+            if (cyberBlocked(x + i, y + py - 1, 1, 3)) {
+                prev = 0xFF;
+                continue;
+            }
+            tft.drawFastVLine(x + i, y + py - 1, 3, cyberHue(i * 2 + t * 6 + k * 120));
+            prev = py;
         }
     }
 }
@@ -94,11 +108,12 @@ void fxStampCard(int x, int y, int w, int required, int from, int to) {
     }
 }
 
-void fxCentreText(const String &text, int cy, int size, int phase) {
+void fxCentreText(const String &text, int cy, int size, int phase, uint16_t bg) {
+    while (size > 1 && (int)text.length() * LW * size > tftWidth - 24) size--;
     tft.setTextSize(size);
-    while (size > 1 && (int)text.length() * LW * size > tftWidth - 16) tft.setTextSize(--size);
-    int w = text.length() * LW * size;
-    cyberRainbowText(text, max(4, (tftWidth - w) / 2), cy - size * 4, phase, bruceConfig.bgColor);
+    int w = text.length() * LW * size, x = max(4, (tftWidth - w) / 2), y = cy - size * 4;
+    cyberRainbowText(text, x, y, phase, bg);
+    cyberKeepOut(x - 4, y - 4, w + 8, size * 8 + 8);
     tft.setTextSize(1);
 }
 

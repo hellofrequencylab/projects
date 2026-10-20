@@ -6,9 +6,13 @@
 
 namespace freq {
 
-// Three rainbow sine waves scrolling through a box: the "frequency" idle
-// animation while waiting for a tap. Call once per frame with a rising t.
+// Three rainbow sine ribbons scrolling through a box over the synthwave
+// scene: the "frequency" idle animation while waiting for a tap. Call once per
+// frame with a rising t; each frame erases only last frame's ribbon pixels
+// (with the sky colour) and skips the scene's keep-outs. fxWaveReset() after
+// the screen under the box was redrawn.
 void fxWave(int x, int y, int w, int h, int t);
+void fxWaveReset();
 
 // Expanding rainbow rings and confetti from (cx, cy), ~0.8 s. Leaves the
 // screen dirty: redraw afterwards.
@@ -22,7 +26,8 @@ constexpr int UNICORN_W = 40, UNICORN_H = 29;
 // filling up to `to`. Pops each new stamp with a sparkle.
 void fxStampCard(int x, int y, int w, int required, int from, int to);
 
-// Big centred rainbow text at text size `size`, clipped to the screen.
-void fxCentreText(const String &text, int cy, int size, int phase);
+// Big centred rainbow text at text size `size`, shrunk to fit the screen,
+// on background `bg` (the glass, the sky...). Registers a scene keep-out.
+void fxCentreText(const String &text, int cy, int size, int phase, uint16_t bg);
 
 } // namespace freq

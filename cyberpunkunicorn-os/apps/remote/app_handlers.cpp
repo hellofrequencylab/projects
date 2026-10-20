@@ -148,7 +148,7 @@ void cmdScan(remote::Request &r) {
     switch (s.status) {
         case freq::API_OK: break;
         case freq::API_DISABLED: return r.fail("reader_mode_off", "turn on reader mode and set the device id/secret");
-        case freq::API_NOT_SET_UP: return r.fail("backend_not_set_up", freq::NOT_SET_UP_TEXT);
+        case freq::API_NOT_SET_UP: return r.fail("backend_not_set_up", freq::reasonWords("not_enabled").hint);
         case freq::API_OFFLINE: return r.fail("offline", "queued; will retry when online");
         default: return r.fail("rejected", s.reason);
     }
