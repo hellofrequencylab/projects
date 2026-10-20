@@ -30,6 +30,13 @@ if [[ "${TRIM_UNUSED_MENUS:-0}" != 0 && "${TRIM_UNUSED_MENUS:-0}" != 1 ]]; then
 fi
 [[ "${TRIM_UNUSED_MENUS:-0}" == 1 ]] && extra_flags+=" -DNM_TRIM_MENUS"
 
+# TRIM_ABSENT_HARDWARE: 0/1 -> -DCU_TRIM_ABSENT_HW (patch 0017): compiles out LoRa,
+# Ethernet, FM and the external NFC gadgets (Chameleon, Amiibolink, PN532 BLE/UART).
+if [[ "${TRIM_ABSENT_HARDWARE:-0}" != 0 && "${TRIM_ABSENT_HARDWARE:-0}" != 1 ]]; then
+  echo "boot.conf: TRIM_ABSENT_HARDWARE must be 0 or 1 (got '${TRIM_ABSENT_HARDWARE:-}')" >&2; exit 1
+fi
+[[ "${TRIM_ABSENT_HARDWARE:-0}" == 1 ]] && extra_flags+=" -DCU_TRIM_ABSENT_HW"
+
 # STARTUP_APP: empty = normal menu; otherwise must be a known Bruce startup app.
 STARTUP_APP="${STARTUP_APP:-}"
 if [[ -n "$STARTUP_APP" ]]; then
@@ -37,6 +44,9 @@ if [[ -n "$STARTUP_APP" ]]; then
     "WardrivingBTEOnly" "WardrivingNoRadio" "Custom SubGHz" "PN532 BLE" "PN532 UART" \
     "JS Interpreter" "Clock" "Mass Storage" "GPS Tracker")
   ok=0; for a in "${valid[@]}"; do [[ "$STARTUP_APP" == "$a" ]] && ok=1 && break; done
+  if [[ "${TRIM_ABSENT_HARDWARE:-0}" == 1 && ( "$STARTUP_APP" == "PN532 BLE" || "$STARTUP_APP" == "PN532 UART" ) ]]; then
+    echo "boot.conf: STARTUP_APP '$STARTUP_APP' is compiled out by TRIM_ABSENT_HARDWARE=1" >&2; exit 1
+  fi
   if [[ "$ok" != 1 ]]; then
     echo "boot.conf: STARTUP_APP '$STARTUP_APP' is not a known startup app" >&2; exit 1
   fi
