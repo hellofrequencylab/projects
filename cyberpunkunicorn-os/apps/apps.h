@@ -4,15 +4,20 @@
 // to CYBER_APP_MEMBERS / CYBER_APP_MENU_ITEMS / cyberAppsCreateCommands below.
 #pragma once
 
+#include "frequency/FrequencyMenu.h"
 #include "hat/HatMenu.h"
 #include "lightshow/LightShowMenu.h"
 
 // Members of MainMenu (one instance per app).
 #define CYBER_APP_MEMBERS                                                                         \
+    FrequencyMenu frequencyMenu;                                                                  \
     HatMenu hatMenu;                                                                              \
     LightShowMenu lightShowMenu;
 
 // Pointers listed first in the main menu, in this order.
-#define CYBER_APP_MENU_ITEMS &lightShowMenu, &hatMenu,
+#define CYBER_APP_MENU_ITEMS &frequencyMenu, &lightShowMenu, &hatMenu,
 
-inline void cyberAppsCreateCommands(SimpleCLI *cli) { createHatCommand(cli); }
+inline void cyberAppsCreateCommands(SimpleCLI *cli) {
+    createHatCommand(cli);
+    createFrequencyCommand(cli);
+}
