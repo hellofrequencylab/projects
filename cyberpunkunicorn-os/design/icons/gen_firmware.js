@@ -30,6 +30,7 @@ const MENU = [
   ['hat', 'Hat'],
   ['gpio', 'GPIO'],
   ['remote', 'Remote'],
+  ['library', 'Library'],
   ['spectrum', 'Spectrum'],
   ['wifi', 'WiFi'],
   ['ble', 'BLE'],
