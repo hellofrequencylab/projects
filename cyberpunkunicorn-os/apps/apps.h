@@ -7,7 +7,11 @@
 #include "frequency/FrequencyMenu.h"
 #include "lightshow/LightShowMenu.h"
 #include "sensors/SensorsMenu.h"
+#include "led/LedMenu.h"
+#include "light/LightMenu.h"
+#include "sound/SoundMenu.h"
 #include "hat/HatMenu.h"
+#include "gpio/GpioMenu.h"
 #include "remote/RemoteMenu.h"
 
 // Members of MainMenu (one instance per app).
@@ -15,15 +19,23 @@
     FrequencyMenu frequencyMenu; \
     LightShowMenu lightShowMenu; \
     SensorsMenu sensorsMenu; \
+    LedMenu ledMenu; \
+    LightMenu lightMenu; \
+    SoundMenu soundMenu; \
     HatMenu hatMenu; \
+    GpioMenu gpioMenu; \
     RemoteMenu remoteMenu;
 
 // Pointers listed first in the main menu, in this order.
-#define CYBER_APP_MENU_ITEMS &frequencyMenu, &lightShowMenu, &sensorsMenu, &hatMenu, &remoteMenu,
+#define CYBER_APP_MENU_ITEMS &frequencyMenu, &lightShowMenu, &sensorsMenu, &ledMenu, &lightMenu, &soundMenu, &hatMenu, &gpioMenu, &remoteMenu,
 
 inline void cyberAppsCreateCommands(SimpleCLI *cli) {
     createFrequencyCommand(cli);
     createSensorsCommand(cli);
+    createLedCommand(cli);
+    createLightCommand(cli);
+    createSoundCommand(cli);
     createHatCommand(cli);
+    createPinsCommand(cli);
     createRemoteCommand(cli);
 }

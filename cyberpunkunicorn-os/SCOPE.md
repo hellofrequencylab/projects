@@ -60,14 +60,16 @@ out (LoRa, Ethernet, FM are already hidden in the menu but still compiled in).
 | Bluetooth LE | — | BLE (Bruce) | exists |
 | ESP-NOW | — | **Sensors** receiver (own callback; coexists with Bruce `core/connect` by being modal) | built, untested |
 | Display + touch | — | system | exists |
-| RGB LED | 4/16/17 *(verify)*, disabled in Bruce's CYD build | **LED** | new (enable `HAS_RGB_LED` or drive directly) |
-| Light sensor (LDR) | GPIO34 *(verify)* | **Light** meter | new |
-| Speaker | GPIO26 *(verify)*, not enabled in Bruce's CYD build | **Sound** (tones/alerts) | new |
+| RGB LED | 4/16/17 *(verify)*, disabled in Bruce's CYD build | **LED** (`apps/led`, CLI `led`) | built, driven directly on LEDC; not yet run on the board |
+| Light sensor (LDR) | GPIO34 *(verify)* | **Light** meter (`apps/light`, CLI `light`) | built; not yet run on the board |
+| Speaker | GPIO26 *(verify)*, not enabled in Bruce's CYD build | **Sound** (`apps/sound`, CLI `tone`) | built; not yet run on the board |
 | microSD | SPI + CS5 | Files (Bruce) | exists; card currently not mounting (fake 2 TB card) |
 | BOOT button | GPIO0 | system | exists |
 | USB serial | — | CLI (Bruce) | exists |
 | Grove/JST ports on hat & CYD | mostly 22/27 *(verify each)* | **Sensors** (wired I2C) | built, untested |
 | Free GPIO | 35 (in) *(verify)* | **GPIO** (Bruce has `gpio` serial cmds) | add on-screen app |
+| Grove/JST ports on hat & CYD | mostly 22/27 *(verify each)* | **Sensors** (wired) | new |
+| Free GPIO | 22, 27 (hat DIP 1-5 off), 35 (in) *(verify 35 on P3)* | **GPIO** (`apps/gpio`, CLI `pins`; Bruce's `gpio` cmds too) | built; not yet run on the board |
 
 ## External sensors — the platform piece
 
@@ -125,6 +127,9 @@ prod `https://frequencylocal.com`). The device app is its NFC tool, built
 3. **Frequency**: venue-tag programmer + verifier (built); member scan waits on the backend.
 4. Onboard extras: **LED**, **Light**, **Sound** (verify pins first).
 5. **Sensors**: I2C wired + ESP-NOW receiver built (untested); next the first sensor-node project.
+3. **Frequency** (scan first, then program).
+4. Onboard extras: **LED**, **Light**, **Sound**, **GPIO** — built 2026-10-19, pins still to verify on the board.
+5. **Sensors**: I2C wired first, then ESP-NOW + first sensor-node project.
 6. Trim unused Bruce modules as flash runs out.
 
 ## Open questions
