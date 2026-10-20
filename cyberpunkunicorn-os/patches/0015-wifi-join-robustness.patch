@@ -74,7 +74,7 @@ index 95c54ce..2cb47fa 100644
          return false;
      }
 diff --git a/src/core/wifi/wifi_common.cpp b/src/core/wifi/wifi_common.cpp
-index 65c921c..9331f6b 100644
+index 65c921c..6b84873 100644
 --- a/src/core/wifi/wifi_common.cpp
 +++ b/src/core/wifi/wifi_common.cpp
 @@ -9,6 +9,7 @@
@@ -121,7 +121,27 @@ index 65c921c..9331f6b 100644
  esp_err_t wifiRawTx(wifi_interface_t ifx, const void *frame, int len, uint8_t retries) {
      esp_err_t err = esp_wifi_80211_tx(ifx, frame, len, false);
      for (uint8_t i = 0; err == ESP_ERR_NO_MEM && i < retries; i++) {
-@@ -84,6 +114,7 @@ bool _wifiConnect(const String &ssid, int encryption) {
+@@ -53,7 +83,9 @@ void ensureWifiPlatform() {
+ 
+ bool _wifiConnect(const String &ssid, int encryption) {
+     String password = bruceConfig.getWifiPassword(ssid);
+-    if (password == "" && encryption > 0) { password = keyboard(password, 63, "Network Password:", true); }
++    // CyberUnicorn: shown, not masked. The resistive screen can double or miss a key,
++    // and with every character a * a mistyped password is invisible.
++    if (password == "" && encryption > 0) { password = keyboard(password, 63, "Network Password:", false); }
+     if (password == "\x1B") return false;
+     bool connected = _connectToWifiNetwork(ssid, password);
+     bool retry = false;
+@@ -72,7 +104,7 @@ bool _wifiConnect(const String &ssid, int encryption) {
+             return false;
+         }
+ 
+-        password = keyboard(password, 63, "Network Password:", true);
++        password = keyboard(password, 63, "Network Password:", false);
+         if (password == "\x1B") {
+             wifiDisconnect();
+             return false;
+@@ -84,6 +116,7 @@ bool _wifiConnect(const String &ssid, int encryption) {
          wifiConnected = true;
          wifiIP = WiFi.localIP().toString();
          bruceConfig.addWifiCredential(ssid, password);
@@ -129,7 +149,7 @@ index 65c921c..9331f6b 100644
  
          // Start timezone update in background if not already running
          if (timezoneTaskHandle == NULL) {
-@@ -126,8 +157,8 @@ bool _connectToWifiNetwork(const String &ssid, const String &pwd) {
+@@ -126,8 +159,8 @@ bool _connectToWifiNetwork(const String &ssid, const String &pwd) {
          Serial.print(".");
  #endif
  
@@ -140,7 +160,7 @@ index 65c921c..9331f6b 100644
              vTaskDelay(500 / portTICK_RATE_MS);
              break;
          }
-@@ -193,7 +224,7 @@ bool wifiConnectMenu(wifi_mode_t mode) {
+@@ -193,7 +226,7 @@ bool wifiConnectMenu(wifi_mode_t mode) {
  
          case WIFI_STA: { // station mode
              int nets;
@@ -149,7 +169,7 @@ index 65c921c..9331f6b 100644
                  displayError("Low RAM: free BLE/SD first", true);
                  return false;
              }
-@@ -299,6 +330,7 @@ void wifiConnectTask(void *pvParameters) {
+@@ -299,6 +332,7 @@ void wifiConnectTask(void *pvParameters) {
      // No-PSRAM guard: don't bring Wi-Fi up if the contiguous DMA block is too
      // small (e.g. BLE already active) — the scan would half-init the driver and
      // crash on teardown. Silent bail: this is a background auto-connect task.
@@ -157,7 +177,7 @@ index 65c921c..9331f6b 100644
      if (!radioHasMemForWifi()) {
          vTaskDelete(NULL);
          return;
-@@ -309,13 +341,15 @@ void wifiConnectTask(void *pvParameters) {
+@@ -309,13 +343,15 @@ void wifiConnectTask(void *pvParameters) {
      String ssid;
      String pwd;
  
@@ -176,7 +196,7 @@ index 65c921c..9331f6b 100644
              if (WiFi.isConnected()) {
                  wifiConnected = true;
                  wifiIP = WiFi.localIP().toString();
-@@ -354,8 +388,8 @@ bool wifiConnecttoKnownNet(void) {
+@@ -354,8 +390,8 @@ bool wifiConnecttoKnownNet(void) {
      }
  
      // No-PSRAM guard: refuse before the scan brings Wi-Fi up in low memory.
@@ -187,7 +207,7 @@ index 65c921c..9331f6b 100644
          return false;
      }
  
-@@ -370,7 +404,7 @@ bool wifiConnecttoKnownNet(void) {
+@@ -370,7 +406,7 @@ bool wifiConnecttoKnownNet(void) {
          vTaskDelay(10 / portTICK_PERIOD_MS);
          String ssid = WiFi.SSID(i);
          String password = bruceConfig.getWifiPassword(ssid);

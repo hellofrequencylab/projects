@@ -51,7 +51,9 @@ User-tunable values go in `boot.conf` → `-D` macros via `PLATFORMIO_BUILD_FLAG
   the Bluetooth remote off when Wi-Fi won't fit beside it instead of waiting on a
   tap (the background boot task never does: it races Bluetooth-at-boot); boot
   auto-connect stops at the first network that joins; `cyberAppsWifiJoined()` after
-  a menu join warns about sign-in-page networks
+  a menu join warns about sign-in-page networks; the Wi-Fi password keyboard shows
+  what you type (the resistive screen repeats a held key every ~200 ms, and a masked
+  double letter was invisible)
 
 (No 0002: the nm-rf-hat cat scene was dropped for the unicorn.) Macros in 0003–0004
 keep their `NM_` prefix from `nm-rf-hat/`; renaming them is churn.
