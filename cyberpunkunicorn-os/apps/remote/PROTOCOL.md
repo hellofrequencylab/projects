@@ -214,6 +214,27 @@ as `lightshow.state`, plus `"starting":true` when it asked the UI to open the sh
   emits `lightshow.error` and shows a warning on screen.
 - Scene names match case-insensitively. Level steps are 4/8/15/25/40 % brightness.
 
+### Wi-Fi (`apps/net/`)
+
+So the console on a computer can put the board on a network over USB, with no
+typing on the touch keyboard. Each blocks the CLI task while it runs.
+
+| cmd | args | data |
+|---|---|---|
+| `wifi.status` | `{check?: bool}` | `{connected, ssid, ip, rssi?, channel?, mac, ap_ip?, saved:[ssid…], internet?, internet_detail?}`. `saved` is names only, never passwords. `check:true` adds the internet probe below (up to ~5 s). |
+| `wifi.scan` | `{}` | `{networks:[{ssid, rssi, channel, auth, saved}]}`, up to 30. `auth` is `open`, `wep`, `wpa2`, `wpa3`, `enterprise` (the board can't join these) or `other`; `ssid:""` is a hidden network. ~2-4 s. |
+| `wifi.join` | `{ssid, password?, save?: true, timeout_ms?: 20000}` | `{ssid, ip, saved, internet, portal?}`. No password = open network. Emits `wifi.joining` first. Fails `not_found`, `wrong_password`, `timeout`, `low_memory` or `bad_args`. Turns the Bluetooth remote off first if Wi-Fi won't fit beside it (no PSRAM). Keeps the board's own hotspot up if it is on. |
+| `wifi.forget` | `{ssid}` | `{ssid}`; `not_saved` if it wasn't |
+
+`internet` is `online` (the probe `http://connectivitycheck.gstatic.com/generate_204`
+got its 204), `captive` (something else answered: a guest network's sign-in page;
+`portal` / `internet_detail` is its address when it sent one), `no_internet`, or
+`no_wifi`. The board has no browser, so on `captive` tell the person to use another
+network or a phone hotspot.
+
+Serial equivalents: `wifi add "<ssid>" ["<password>"]`, `wifi forget "<ssid>"`
+(patch 0015), `netcheck`.
+
 ### Planned commands (not in this build)
 
 Handlers are wired in by the coordinator when each app branch merges. Args and data
@@ -239,6 +260,7 @@ this table when it registers its handler.
 |---|---|---|
 | `lightshow.state` | same as `lightshow.state` | show starts, stops, or changes scene/level (buttons or remote) |
 | `lightshow.error` | `{message}` | the show refused to start |
+| `wifi.joining` | `{}` | `wifi.join` started (it can take up to 30 s) |
 
 Events go to USB always, and to BLE when a phone is connected.
 
@@ -268,7 +290,11 @@ screen from a handler: leave a request for the app's own loop
 (`apps/lightshow/LightShowMenu.cpp` shows the pattern). To send an event, call
 `remote::emit("name", obj)`.
 
-## 6. Internet relay (design only, not built)
+## 6. Internet relay (website side built, device side not)
+
+frequency-web now has `POST /api/v1/devices/realtime-token` (LIVE-1155), behind
+`DEVICE_RELAY_ENABLED`. Its allow-list includes `led.mode`, which this firmware
+answers `not_available`. The device-side Realtime client below is not built yet.
 
 Goal: control the device from any network. Neither side needs an open port. Both
 are clients of **Supabase Realtime** (frequency-web's backend), meeting on a

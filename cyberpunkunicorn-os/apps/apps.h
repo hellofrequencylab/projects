@@ -16,6 +16,7 @@
 #include "hat/HatMenu.h"
 #include "gpio/GpioMenu.h"
 #include "remote/RemoteMenu.h"
+#include "net/net.h" // no menu: console Wi-Fi commands + `netcheck`
 
 // Members of MainMenu (one instance per app).
 #define CYBER_APP_MEMBERS \
@@ -45,4 +46,5 @@ inline void cyberAppsCreateCommands(SimpleCLI *cli) {
     createHatCommand(cli);
     createPinsCommand(cli);
     createRemoteCommand(cli);
+    createNetCommand(cli);
 }

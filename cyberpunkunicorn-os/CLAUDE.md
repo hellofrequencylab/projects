@@ -44,6 +44,16 @@ User-tunable values go in `boot.conf` → `-D` macros via `PLATFORMIO_BUILD_FLAG
   `cyberAppsBoot()` at the end of setup; while the BLE API is on, the CLI task still
   reads USB and answers on the source transport; `rpc` lines skip the `# ` prompt
   and the back-to-menu; `isBLEAPIEnabled()`; BLE advertised name `CU5K`
+- `0015` Wi-Fi joins: open networks count as saved (`hasWifiCredential`; upstream
+  treated an empty password as "not saved"), `wifi add "<ssid>"` with no password,
+  `wifi forget`, password no longer trimmed; join timeout 10 s → 20 s with a reason
+  ("Network not found", "Wrong password?"); the menu and known-network joins turn
+  the Bluetooth remote off when Wi-Fi won't fit beside it instead of waiting on a
+  tap (the background boot task never does: it races Bluetooth-at-boot); boot
+  auto-connect stops at the first network that joins; `cyberAppsWifiJoined()` after
+  a menu join warns about sign-in-page networks; the Wi-Fi password keyboard shows
+  what you type (the resistive screen repeats a held key every ~200 ms, and a masked
+  double letter was invisible)
 
 (No 0002: the nm-rf-hat cat scene was dropped for the unicorn.) Macros in 0003–0004
 keep their `NM_` prefix from `nm-rf-hat/`; renaming them is churn.
@@ -75,6 +85,12 @@ source published if builds are distributed.
   Menu app: live status, recent commands, Bluetooth now / at boot (NVS `remote/bleboot`).
   CLI: `remote [ble on|off] [boot on|off]`. Android must open the CH340 with DTR/RTS
   off. BLE replies are split to MTU−3 per notification. Not yet tested on hardware.
+- `net/` — no menu. Console Wi-Fi setup: `wifi.status|scan|join|forget` remote
+  commands (`net_remote.cpp`, contract in PROTOCOL.md "Wi-Fi") so a computer can put
+  the board on a network over USB; `joinNetwork()` never draws (CLI task).
+  `checkInternet()` probes `http://connectivitycheck.gstatic.com/generate_204`:
+  204 = online, anything else answering = captive portal (sign-in page). Used by
+  `wifi.join`, Weather's error text and the patch 0015 hook. CLI: `netcheck`.
 - `hat/` — **Hat**: probes which hat module is live (I2C 0x24 for PN532, CC1101
   PARTNUM/VERSION, nRF24 SETUP_AW, RX-pin noise for IR/433). CLI: `hat`.
   Verified: PN532 detected with DIP 3 on. IR/433 is a heuristic — unverified.
@@ -148,6 +164,10 @@ source published if builds are distributed.
 **Persisted-config gotcha:** compile-time defaults only apply when the key is
 absent from the on-flash config (LittleFS at 0x3d0000). App-only flashing keeps
 it; change settings live over serial (`settings startupApp WebUI`, …) or the menu.
+`STARTUP_APP` is now empty (normal menu, 2026-10-20): booting into the Web UI opened
+the board's own hotspot whenever no saved network was in range, so it never offered
+a new network, and setup() never finished. A unit flashed earlier keeps `WebUI` until
+Config → Startup App → None.
 This bites the skin too: colours, the Wi-Fi AP name/password and web UI login
 already saved on a unit keep their old values until changed in Config.
 

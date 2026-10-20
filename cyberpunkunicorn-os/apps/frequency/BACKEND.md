@@ -3,10 +3,14 @@
 How the CyberUnicorn **Frequency** app relates to the Frequency loyalty
 platform (`frequency-web`: Next.js + Supabase, prod `https://frequencylocal.com`).
 
-> **Status (2026-10-19): the device endpoints below DO NOT EXIST in
-> frequency-web yet.** They are a proposal. Everything under "Works today"
-> needs no backend change. Reader mode is off by default. With it on, a 404
-> from the server is shown as "Frequency backend not set up for devices yet".
+> **Status (2026-10-20): the device endpoints below now EXIST in frequency-web**
+> (LIVE-1125: `app/api/v1/devices/{scan,cards}`, `lib/devices/`), behind the
+> `SCANNER_DEVICES_ENABLED` switch. While it is off they answer 404
+> `{"ok":false,"reason":"not_enabled"}`, which the device shows as "backend not
+> set up". The reply fields match this doc. `queued` / `scanned_at` are accepted
+> and ignored: the server credits the day it receives the scan. Reader mode is
+> off by default on the device. A 401 or 429 during an offline-queue replay keeps
+> the scan queued.
 
 ## Works today: venue tags (no backend change)
 
