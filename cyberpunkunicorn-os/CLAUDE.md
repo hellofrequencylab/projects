@@ -93,6 +93,10 @@ source published if builds are distributed.
   Uses Bruce's `PN532` (`read()`, `write_ndef()` with `rawNdefRecord`, since
   `buildNdefMessage` caps URIs at 99 chars). Not yet tested with real tags.
 - `hooks.h` — what patch 0014 calls: raw-line hook and boot hook.
+  `cyberAppsBoot()` (hooks.cpp) also applies boot.conf `NEVER_DIM=1` (`-DCU_NEVER_DIM`):
+  `bruceConfig.setDimmer(0)` once per unit, guarded by NVS `cyberhw/nodim`, because
+  `dimmerSet` lives in the saved config and a compile-time default never reaches a
+  flashed unit. A dim time picked later in Config stays. `hw forget all` keeps the flag.
 - `remote/` — **Remote**: phone control (Frequency Experience) — JSON `rpc` lines over
   USB serial and BLE, contract in [`apps/remote/PROTOCOL.md`](apps/remote/PROTOCOL.md).
   Apps add a command with one line, `REMOTE_COMMAND("name", handler)` (`remote/remote.h`).
