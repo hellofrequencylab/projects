@@ -7,6 +7,7 @@
 #include <Preferences.h>
 #include <algorithm>
 #include <globals.h>
+#include <stdarg.h>
 #include <vector>
 
 namespace {
@@ -256,18 +257,29 @@ void SlideshowMenu::drawIcon(float scale) {
     );
 }
 
+// Bruce 1.16.1's serialDevice->printf mangles its arguments (CLAUDE.md, gotcha 9):
+// format here, then print the finished string.
+static void sayf(const char *fmt, ...) {
+    char buf[192];
+    va_list ap;
+    va_start(ap, fmt);
+    vsnprintf(buf, sizeof(buf), fmt, ap);
+    va_end(ap);
+    serialDevice->print(buf);
+}
+
 static uint32_t slidesCallback(cmd *c) {
     Settings s;
     s.load();
     Source src = findSlides();
-    serialDevice->printf(
+    sayf(
         "Slideshow: %s per still, %s\n", secondsLabel(s.slideMs).c_str(), s.loop ? "loops" : "plays once"
     );
     if (src.files.empty()) {
         serialDevice->println("No pictures in /slides on SD or LittleFS (.jpg .jpeg .png .bmp .gif)");
         return true;
     }
-    serialDevice->printf("%d slides in %s:%s\n", (int)src.files.size(), src.where, FOLDER);
+    sayf("%d slides in %s:%s\n", (int)src.files.size(), src.where, FOLDER);
     for (const String &n : src.files) serialDevice->println("  " + n);
     return true;
 }
