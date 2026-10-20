@@ -1,0 +1,90 @@
+name: "cyberpunkunicorn-os: build and release"
+
+# Path-filtered: touching another project must not run this.
+# A tag cu5k-v<version> (matching OS_VERSION in build.sh) publishes a GitHub
+# release with app.bin + manifest.json, which the website's updater reads.
+on:
+  push:
+    paths: ["cyberpunkunicorn-os/**", ".github/workflows/cyberpunkunicorn-os.yml"]
+    tags: ["cu5k-v*"]
+  pull_request:
+    paths: ["cyberpunkunicorn-os/**", ".github/workflows/cyberpunkunicorn-os.yml"]
+  workflow_dispatch:
+
+concurrency:
+  group: cu5k-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    defaults:
+      run:
+        working-directory: cyberpunkunicorn-os
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # PlatformIO's toolchains and Bruce's library deps: ~1 GB, slow to fetch.
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.platformio
+            cyberpunkunicorn-os/.venv
+          key: cu5k-pio-${{ hashFiles('cyberpunkunicorn-os/build.sh') }}
+
+      - name: Build
+        run: ./build.sh
+
+      # The app partition is 0x10000-0x3cffff. A bigger app.bin won't boot.
+      - name: Check flash budget
+        run: |
+          size=$(stat -c %s build/app.bin)
+          limit=$((0x3C0000))
+          echo "app.bin: $size bytes, $((limit - size)) free of $limit"
+          echo "### app.bin: $size bytes, $(( (limit - size) / 1024 )) KB free" >> "$GITHUB_STEP_SUMMARY"
+          test "$size" -le "$limit"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cu5k-${{ github.sha }}
+          path: |
+            cyberpunkunicorn-os/build/app.bin
+            cyberpunkunicorn-os/build/full.bin
+            cyberpunkunicorn-os/build/manifest.json
+          if-no-files-found: error
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/cu5k-v')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: cu5k-${{ github.sha }}
+          path: dist
+
+      - name: Tag must match the build's version
+        run: |
+          version=$(python3 -c 'import json; print(json.load(open("dist/manifest.json"))["version"])')
+          test "${GITHUB_REF_NAME}" = "cu5k-v${version}" || {
+            echo "Tag ${GITHUB_REF_NAME} but build.sh says OS_VERSION=${version}"; exit 1; }
+
+      # Bruce is AGPL-3.0: the release links its own source (this tag) and keeps
+      # the "Based on Bruce" credit, which the firmware shows in Device Info.
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/app.bin
+            dist/full.bin
+            dist/manifest.json
+          body: |
+            CyberUnicorn 5000 ${{ github.ref_name }}. Based on Bruce (AGPL-3.0); source is this tag.
+            Update from the website, or `./flash.sh` with `app.bin` (keeps settings).
+            `full.bin` is the whole flash image for a first install only.

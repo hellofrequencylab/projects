@@ -11,7 +11,11 @@ build (copied, not shared — that project stays as the known-good fallback).
 - PlatformIO **6.2.0**, esptool **5.4.0** — in `.venv/`, created by `build.sh`
 - OS identity: `OS_NAME` / `OS_VERSION` at the top of `build.sh` ("CyberUnicorn 5000", 0.1.0).
   The display font has no ™ glyph: screens draw a superscript "TM"; serial prints a real ™.
-- Build: `./build.sh` → `build/app.bin`, `build/full.bin`
+- Build: `./build.sh` → `build/app.bin`, `build/full.bin`, `build/manifest.json` (version, commit,
+  app.bin size + sha256, offset 0x10000: what the website's updater reads)
+- CI: `.github/workflows/cyberpunkunicorn-os.yml` builds every push/PR touching this folder
+  and fails if app.bin outgrows the 0x3C0000 app partition. Tag `cu5k-v<OS_VERSION>`
+  to publish a GitHub release with app.bin, full.bin and manifest.json
 - Flash: `./flash.sh` (app only, keeps on-device settings) or `./flash.sh --full`
 - Remote: `./remote.sh` mirrors the screen to http://localhost:8765 over serial
 - Test: none automated. A clean build is the minimum bar; confirm on the device
