@@ -10,6 +10,7 @@ over anything here.
 | `aio-board/` | [`aio-board/CLAUDE.md`](aio-board/CLAUDE.md) — AIO Board V1.4. Hardware facts read off the physical board; one radio at a time, no Bluetooth. |
 | `cyberpunkunicorn-os/` | [`cyberpunkunicorn-os/CLAUDE.md`](cyberpunkunicorn-os/CLAUDE.md) — CyberUnicorn 5000, our Bruce-based OS for CYD + NM-RF-HAT. Non-negotiable: never leave edits in `.bruce/`; Bruce changes are patches, our apps live in `apps/`. |
 | `unicorn-os-circuitpython/` | [`unicorn-os-circuitpython/CLAUDE.md`](unicorn-os-circuitpython/CLAUDE.md) — CircuitPython 10.3.1 on Feather ESP32-S3 TFT. Archive of the original launcher; settings live in nvm, never commit `settings.toml`. |
+| `sensor-node/` | [`sensor-node/CLAUDE.md`](sensor-node/CLAUDE.md) — ESP-NOW node for the CyberUnicorn Sensors hub. Non-negotiable: `include/sensor_packet.h` is a verbatim copy of `cyberpunkunicorn-os/apps/sensors/sensor_packet.h`; change both together. |
 | a new project | [`_template/CLAUDE.md`](_template/CLAUDE.md), then `README.md` → "Adding a project" |
 
 ## Rules that hold everywhere
