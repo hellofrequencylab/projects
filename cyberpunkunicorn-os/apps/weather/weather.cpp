@@ -6,6 +6,7 @@
 #include <WiFi.h>
 #include <WiFiClientSecure.h>
 #include <globals.h>
+#include <stdarg.h>
 #include <math.h>
 
 namespace weather {
@@ -216,20 +217,31 @@ int tempHue(float t, bool metric) {
 
 using namespace weather;
 
+// Bruce 1.16.1's serialDevice->printf mangles its arguments (CLAUDE.md, gotcha 9):
+// format here, then print the finished string.
+static void sayf(const char *fmt, ...) {
+    char buf[192];
+    va_list ap;
+    va_start(ap, fmt);
+    vsnprintf(buf, sizeof(buf), fmt, ap);
+    va_end(ap);
+    serialDevice->print(buf);
+}
+
 static void printData(const Data &d) {
     const char *deg = d.metric ? "C" : "F";
-    serialDevice->printf("Weather for %s (%.4f, %.4f), local %s\n", d.city.c_str(), d.lat, d.lon,
+    sayf("Weather for %s (%.4f, %.4f), local %s\n", d.city.c_str(), d.lat, d.lon,
                          d.localTime.c_str());
-    serialDevice->printf("  %s, %.1f %s (feels %.1f), humidity %.0f%%\n", describe(d.code), d.temp, deg,
+    sayf("  %s, %.1f %s (feels %.1f), humidity %.0f%%\n", describe(d.code), d.temp, deg,
                          d.feels, d.humidity);
-    serialDevice->printf("  wind %.1f %s, pressure %.*f %s, %s\n", d.wind, d.metric ? "km/h" : "mph",
+    sayf("  wind %.1f %s, pressure %.*f %s, %s\n", d.wind, d.metric ? "km/h" : "mph",
                          d.metric ? 0 : 2, d.pressure, d.metric ? "hPa" : "inHg", d.isDay ? "day" : "night");
     static const char *names[] = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
     for (int i = 0; i < DAYS; i++)
-        serialDevice->printf("  %s: %s, %.0f / %.0f %s\n", names[d.weekday[i] % 7], describe(d.dayCode[i]),
+        sayf("  %s: %s, %.0f / %.0f %s\n", names[d.weekday[i] % 7], describe(d.dayCode[i]),
                              d.hi[i], d.lo[i], deg);
     float c, h;
-    if (indoorClimate(c, h)) serialDevice->printf("  indoor: %.1f C, humidity %.0f%%\n", c, h);
+    if (indoorClimate(c, h)) sayf("  indoor: %.1f C, humidity %.0f%%\n", c, h);
     else serialDevice->println("  indoor: no sensor hooked up");
 }
 
@@ -245,7 +257,7 @@ static uint32_t weatherCallback(cmd *c) {
             s.metric = (u == "metric");
             s.save();
         }
-        serialDevice->printf("weather units: %s\n", s.metric ? "metric" : "imperial");
+        sayf("weather units: %s\n", s.metric ? "metric" : "imperial");
         return true;
     }
     if (a0 == "loc") {
@@ -267,7 +279,7 @@ static uint32_t weatherCallback(cmd *c) {
                 s.city += (s.city.isEmpty() ? "" : " ") + cmd.getArgument(i).getValue();
             s.save();
         }
-        if (s.manual) serialDevice->printf("weather loc: %.4f, %.4f %s\n", s.lat, s.lon, s.city.c_str());
+        if (s.manual) sayf("weather loc: %.4f, %.4f %s\n", s.lat, s.lon, s.city.c_str());
         else serialDevice->println("weather loc: auto (from public IP)");
         return true;
     }
