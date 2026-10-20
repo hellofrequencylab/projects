@@ -172,6 +172,10 @@ the pinned tag — not memory, not `main`. Board pins:
    cache. Symptom: `cannot find -lnet80211`. Fix: rename `libnet80211.a.old`
    back, delete `lib/.patched`, rebuild with `.venv/bin` on PATH (build.sh does this).
 8. Boot tagline is drawn in the touch footer; ~26 chars fit at 320 px.
+9. **Never `serialDevice->printf` with arguments.** Bruce 1.16.1's `USBSerial::vprintf`
+   (`src/core/USBSerial/USBSerial.h`) passes its `va_list` to the variadic `printf`, so
+   arguments print as garbage and a `%s` crashes the board (seen 2026-10-19 with `pins`).
+   `snprintf` into a buffer, then `serialDevice->println(String(buf))`.
 
 ## Recovery
 

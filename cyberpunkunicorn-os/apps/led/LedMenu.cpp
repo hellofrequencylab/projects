@@ -239,7 +239,9 @@ static uint32_t ledCallback(cmd *c) {
     int v[3] = {a.toInt(), cmd.getArgument("g").getValue().toInt(), cmd.getArgument("b").getValue().toInt()};
     for (int &x : v) x = constrain(x, 0, 255);
     write(v[0], v[1], v[2]);
-    serialDevice->printf("LED R%d G%d B%d (pins %d/%d/%d)\n", v[0], v[1], v[2], CYD_LED_R, CYD_LED_G, CYD_LED_B);
+    char buf[64];
+    snprintf(buf, sizeof(buf), "LED R%d G%d B%d (pins %d/%d/%d)", v[0], v[1], v[2], CYD_LED_R, CYD_LED_G, CYD_LED_B);
+    serialDevice->println(String(buf));
     return true;
 }
 

@@ -119,9 +119,9 @@ void LightMenu::drawIcon(float scale) {
 
 static uint32_t lightCallback(cmd *c) {
     Reading r = readLight();
-    serialDevice->printf(
-        "Light %d%% (%s)  raw %d  %d mV  GPIO%d\n", r.pct, band(r.pct), r.raw, r.mv, CYD_LDR
-    );
+    char buf[80];
+    snprintf(buf, sizeof(buf), "Light %d%% (%s)  raw %d  %d mV  GPIO%d", r.pct, band(r.pct), r.raw, r.mv, CYD_LDR);
+    serialDevice->println(String(buf));
     return true;
 }
 

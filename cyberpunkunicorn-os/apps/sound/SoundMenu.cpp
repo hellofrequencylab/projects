@@ -312,8 +312,14 @@ static uint32_t toneCallback(cmd *c) {
         }
     }
     volume = oldVol;
-    if (ok) serialDevice->printf("tone %s on GPIO%d, volume %d/%d\n", a.c_str(), CYD_SPEAKER, vol >= 0 ? constrain(vol, 0, VOL_MAX) : oldVol, VOL_MAX);
-    else serialDevice->println("usage: tone <80-20000 Hz> [ms] [vol 0-4] | jingle | sweep | ok | alert | error");
+    if (ok) {
+        char buf[80];
+        snprintf(
+            buf, sizeof(buf), "tone %s on GPIO%d, volume %d/%d", a.c_str(), CYD_SPEAKER,
+            vol >= 0 ? constrain(vol, 0, VOL_MAX) : oldVol, VOL_MAX
+        );
+        serialDevice->println(String(buf));
+    } else serialDevice->println("usage: tone <80-20000 Hz> [ms] [vol 0-4] | jingle | sweep | ok | alert | error");
     return ok;
 }
 
