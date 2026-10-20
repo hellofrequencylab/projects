@@ -66,6 +66,7 @@ bool rescan();
 struct AppNeed {
     const char *menuName; // MenuItemInterface name
     uint16_t anyOf;       // bit per Part: any one present makes the app active
+    bool pinned;          // always in the main menu; the hardware card shows on open
 };
 
 const AppNeed *needFor(const String &menuName); // nullptr = no rule, always active

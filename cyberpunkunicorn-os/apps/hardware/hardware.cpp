@@ -24,8 +24,9 @@ const PartInfo PARTS[HW_PART_COUNT] = {
 };
 
 // Apps that need hardware. Anything not listed is always in the main menu.
+// Frequency is pinned: it's the flagship and stays page 1 even with no PN532 found.
 const AppNeed NEEDS[] = {
-    {"Frequency",  uint16_t(1u << HW_PN532)                          },
+    {"Frequency",  uint16_t(1u << HW_PN532), true                    },
     {"RFID",       uint16_t(1u << HW_PN532)                          },
     {"RF",         uint16_t((1u << HW_CC1101) | (1u << HW_OOK433))      },
     {"NRF24",      uint16_t(1u << HW_NRF24)                          },
@@ -160,7 +161,7 @@ const AppNeed *needFor(const String &menuName) {
 
 bool appActive(const String &menuName) {
     const AppNeed *n = needFor(menuName);
-    if (!n) return true;
+    if (!n || n->pinned) return true;
     for (int i = 0; i < HW_PART_COUNT; i++)
         if ((n->anyOf & (1u << i)) && present(Part(i))) return true;
     return false;
