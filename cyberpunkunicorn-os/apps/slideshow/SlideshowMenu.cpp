@@ -1,5 +1,7 @@
 #include "SlideshowMenu.h"
 
+#include "../ui/cyber_icon.h"
+
 #include "../ui/rainbow.h"
 #include "core/display.h"
 #include "core/sd_functions.h"
@@ -244,17 +246,9 @@ void SlideshowMenu::run() {
 }
 
 void SlideshowMenu::drawIcon(float scale) {
+    // Pixel-art icon from design/icons (apps/ui/cyber_icons.h).
     clearIconArea();
-    // A picture frame with a rainbow border, a sun and two mountains.
-    int w = scale * 64, h = scale * 46;
-    int x = iconCenterX - w / 2, y = iconCenterY - h / 2;
-    for (int k = 0; k < (int)(scale * 3); k++) cyberRainbowFrame(x + k, y + k, w - 2 * k, h - 2 * k, k * 40);
-    int ix = x + scale * 4, iy = y + scale * 4, iw = w - scale * 8, ih = h - scale * 8;
-    tft.fillCircle(ix + iw * 3 / 4, iy + ih / 3, scale * 5, cyberHue(50));
-    tft.fillTriangle(ix, iy + ih, ix + iw / 3, iy + ih / 3, ix + iw * 2 / 3, iy + ih, cyberHue(290));
-    tft.fillTriangle(
-        ix + iw / 3, iy + ih, ix + iw * 2 / 3, iy + ih / 2, ix + iw, iy + ih, cyberHue(190)
-    );
+    cyberIcon(getName().c_str(), iconCenterX, iconCenterY, max(2, (int)(scale * 2.4f + 0.5f)), true);
 }
 
 // Bruce 1.16.1's serialDevice->printf mangles its arguments (CLAUDE.md, gotcha 9):

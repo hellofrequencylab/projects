@@ -1,0 +1,55 @@
+<!-- @dsCard group="Device" viewport="900x620" name="Device UI kit" subtitle="Boot, main menu and app launch, click-through" -->
+<!doctype html>
+<html><head><meta charset="utf-8"><title>CyberUnicorn 5000 · Device</title>
+<link rel="stylesheet" href="../../styles.css">
+<style>html,body{margin:0;background:#0c001c;color:#fff;font-family:var(--font-body);font-size:20px}a{color:var(--cu-cyan)}a:hover{color:var(--cu-pink)}#root{min-height:100vh;display:flex;align-items:center;justify-content:center;gap:32px;padding:24px;flex-wrap:wrap;box-sizing:border-box}
+.pad{display:grid;grid-template-columns:repeat(3,56px);grid-template-rows:repeat(3,56px);gap:6px}.pad button{all:unset;cursor:pointer;display:grid;place-items:center;background:#1e0046;border:1px solid var(--cu-magenta);font-family:var(--font-display);font-size:7px;color:#fff}.pad button:hover{background:#3c0060}.pad button:active{background:var(--cu-magenta)}
+.side{display:flex;flex-direction:column;gap:18px;max-width:240px}.side p{margin:0;color:var(--cu-lavender);font-size:18px;line-height:1.2}</style>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="../../_ds_bundle.js"></script>
+</head><body><div id="root"></div>
+<script type="text/babel" src="AppScreen.jsx"></script>
+<script type="text/babel" src="apps/shared.jsx"></script>
+<script type="text/babel" src="apps/Frequency.jsx"></script>
+<script type="text/babel" src="apps/AppsA.jsx"></script>
+<script type="text/babel" src="apps/AppsB.jsx"></script>
+<script type="text/babel">
+const { DeviceScreen, BootScene, MenuScreen, ICON_ORDER } = window.CyberUnicorn5000DesignSystem_f09c19;
+function Kit() {
+  const [screen, setScreen] = React.useState(localStorage.getItem('cu5k-kit-screen') === 'menu' ? 'menu' : 'boot');
+  const [i, setI] = React.useState(+localStorage.getItem('cu5k-kit-i') || 0);
+  const [nav, setNav] = React.useState({ k: null, n: 0 });
+  const APPS = { frequency: window.FrequencyApp, lightshow: LightShowApp, sensors: SensorsApp, led: LedApp, light: LightApp, sound: SoundApp, slideshow: SlideshowApp, weather: WeatherApp, hat: HatApp, gpio: GpioApp, remote: RemoteApp };
+  React.useEffect(() => { localStorage.setItem('cu5k-kit-screen', screen === 'boot' ? 'boot' : 'menu'); localStorage.setItem('cu5k-kit-i', i); }, [screen, i]);
+  const n = ICON_ORDER.length;
+  const send = k => setNav(v => ({ k, n: v.n + 1 }));
+  const prev = () => screen === 'menu' ? setI(v => (v + n - 1) % n) : screen === 'app' && send('prev');
+  const next = () => screen === 'menu' ? setI(v => (v + 1) % n) : screen === 'app' && send('next');
+  const sel = () => screen === 'app' ? send('sel') : setScreen(s => s === 'boot' ? 'menu' : 'app');
+  const esc = () => screen === 'app' && (APPS[app] ? send('esc') : setScreen('menu'));
+  React.useEffect(() => {
+    const k = e => { if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') prev(); else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') next(); else if (e.key === 'Enter') sel(); else if (e.key === 'Escape' || e.key === 'Backspace') esc(); };
+    window.addEventListener('keydown', k); return () => window.removeEventListener('keydown', k);
+  });
+  const app = ICON_ORDER[i];
+  return <>
+    <DeviceScreen scale={2}>
+      {screen === 'boot' && <div onClick={sel} style={{ cursor: 'pointer' }}><BootScene loop={false} onDone={() => setScreen('menu')} /></div>}
+      {screen === 'menu' && <MenuScreen app={app} index={i} count={n} onPrev={prev} onNext={next} onSelect={sel} />}
+      {screen === 'app' && (APPS[app] ? React.createElement(APPS[app], { nav, onExit: () => setScreen('menu') }) : <AppScreen app={app} onEsc={() => setScreen('menu')} />)}
+    </DeviceScreen>
+    <div className="side">
+      <div className="pad">
+        <span></span><button onClick={prev}>PREV</button><span></span>
+        <button onClick={esc}>ESC</button><button onClick={sel}>SEL</button><button onClick={next}>NEXT</button>
+        <span></span><button onClick={() => { setScreen('boot'); }}>BOOT</button><span></span>
+      </div>
+      <p>Arrow keys move, Enter selects, Esc goes back. Every CyberUnicorn app opens its own screens; Bruce's built-in menus open a placeholder.</p>
+    </div>
+  </>;
+}
+const go = () => { if (!window.FrequencyApp || !window.RemoteApp || !window.SoundApp || !window.AppScreen) { setTimeout(go, 30); return; } ReactDOM.createRoot(document.getElementById('root')).render(<Kit />); }; go();
+</script>
+</body></html>

@@ -1,0 +1,18 @@
+/* Geometry of the 2.8" CYD panel and the pixel grid everything snaps to. */
+:root{
+  --screen-w:320px;
+  --screen-h:240px;
+  --boot-title-h:34px;   /* TITLE_H */
+  --boot-scene-h:170px;  /* SCENE_H */
+  --boot-horizon:110px;  /* HORIZON inside the scene */
+  --pixel-cell:3px;      /* UNI_SCALE: device px per sprite px */
+  --icon-grid-w:32; /* @kind other */      /* icon sprite cells */
+  --icon-grid-h:24; /* @kind other */
+  --icon-w:96px;         /* 32 cells x 3 */
+  --icon-h:72px;
+  --tagline-max:26; /* @kind other */      /* chars that fit in the footer at 320px */
+  --space-1:2px;--space-2:4px;--space-3:6px;--space-4:8px;--space-5:12px;--space-6:16px;--space-7:24px;--space-8:32px;
+  --radius-0:0;--radius-chip:3px;--radius-card:4px;--radius-screen:5px;
+  --border-1:1px;--border-2:2px;
+  --shadow-glitch:-2px 0 0 var(--cu-cyan),2px 0 0 var(--cu-magenta-hot);
+}

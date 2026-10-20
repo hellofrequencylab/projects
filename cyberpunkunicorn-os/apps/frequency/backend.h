@@ -1,6 +1,8 @@
-// Frequency device API client. The endpoints are a PROPOSED contract
-// (apps/frequency/BACKEND.md): frequency-web does not implement them yet, so
-// a 404 means "backend not set up for devices", not "card unknown".
+// Frequency device API client: POST /api/v1/devices/scan and /cards on
+// frequency-web (LIVE-1125), authenticated with X-Frequency-Device. While the
+// site's scanner switch is off both answer 404, which means "device scans are
+// switched off", not "card unknown". Refusals come back as reason codes;
+// reasonWords() turns them into screen text.
 #pragma once
 
 #include <Arduino.h>
@@ -10,11 +12,18 @@ namespace freq {
 enum ApiStatus {
     API_OK,
     API_REJECTED,  // server answered ok:false or 4xx: show `reason`
-    API_NOT_SET_UP, // 404: the device endpoints don't exist yet
+    API_NOT_SET_UP, // 404: device scans are switched off on the site
     API_OFFLINE,   // no Wi-Fi, connection failed or 5xx: worth queueing
     API_DISABLED,  // reader mode off or device id/secret missing
 };
-extern const char *NOT_SET_UP_TEXT;
+
+// Plain words for a refusal code, for the screen: a short title (ASCII caps,
+// fits size 2) and one instruction. Unknown codes come back as themselves.
+struct Words {
+    const char *title;
+    String hint;
+};
+Words reasonWords(const String &code);
 
 struct ScanReply {
     ApiStatus status = API_DISABLED;

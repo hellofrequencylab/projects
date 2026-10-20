@@ -1,5 +1,7 @@
 #include "SensorsMenu.h"
 
+#include "../ui/cyber_icon.h"
+
 #include "../ui/rainbow.h"
 #include "core/display.h"
 #include "core/scrollableTextArea.h"
@@ -385,24 +387,9 @@ void SensorsMenu::optionsMenu() {
 }
 
 void SensorsMenu::drawIcon(float scale) {
+    // Pixel-art icon from design/icons (apps/ui/cyber_icons.h).
     clearIconArea();
-    // A rainbow sparkline in a little screen, with radio dots for the nodes.
-    int w = scale * 72, h = scale * 46;
-    int x = iconCenterX - w / 2, y = iconCenterY - h / 2;
-    tft.drawRoundRect(x, y, w, h, scale * 5, bruceConfig.priColor);
-    const int pts[] = {70, 45, 60, 25, 50, 15, 40, 30};
-    const int n = sizeof(pts) / sizeof(pts[0]);
-    int px = 0, py = 0;
-    for (int i = 0; i < n; i++) {
-        int X = x + scale * 6 + i * (w - scale * 12) / (n - 1);
-        int Y = y + h * pts[i] / 100 + scale * 4;
-        if (i) {
-            tft.drawLine(px, py, X, Y, cyberHue(i * 45));
-            tft.drawLine(px, py + 1, X, Y + 1, cyberHue(i * 45));
-        }
-        px = X, py = Y;
-    }
-    for (int r = 1; r <= 3; r++) tft.fillCircle(x + w - scale * 8, y + scale * 8 * r / 2 + 2, scale * r, cyberHue(180 + r * 40));
+    cyberIcon(getName().c_str(), iconCenterX, iconCenterY, max(2, (int)(scale * 2.4f + 0.5f)), true);
 }
 
 // ---- CLI --------------------------------------------------------------------------

@@ -1,5 +1,7 @@
 #include "SoundMenu.h"
 
+#include "../ui/cyber_icon.h"
+
 #include "../cyd_pins.h"
 #include "../ui/rainbow.h"
 #include "core/display.h"
@@ -276,17 +278,9 @@ void SoundMenu::optionsMenu() {
 }
 
 void SoundMenu::drawIcon(float scale) {
+    // Pixel-art icon from design/icons (apps/ui/cyber_icons.h).
     clearIconArea();
-    // A speaker cone with rainbow sound waves.
-    int cx = iconCenterX - scale * 14, cy = iconCenterY;
-    int bw = scale * 8, bh = scale * 14;
-    tft.fillRect(cx - bw, cy - bh / 2, bw, bh, bruceConfig.priColor);
-    tft.fillTriangle(cx, cy - bh / 2, cx + scale * 14, cy - scale * 18, cx, cy + bh / 2, bruceConfig.priColor);
-    tft.fillTriangle(cx, cy + bh / 2, cx + scale * 14, cy - scale * 18, cx + scale * 14, cy + scale * 18, bruceConfig.priColor);
-    for (int i = 0; i < 3; i++) {
-        int r = scale * (24 + i * 9);
-        tft.drawArc(cx, cy, r, r - max(2, (int)(scale * 3)), 230, 310, cyberHue(300 + i * 60), bruceConfig.bgColor);
-    }
+    cyberIcon(getName().c_str(), iconCenterX, iconCenterY, max(2, (int)(scale * 2.4f + 0.5f)), true);
 }
 
 static uint32_t toneCallback(cmd *c) {

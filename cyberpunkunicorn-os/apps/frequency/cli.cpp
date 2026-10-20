@@ -160,7 +160,7 @@ uint32_t cbScan(cmd *c) {
         case API_OFFLINE:
             out("Offline (" + r.reason + "): " + (queueScan({nowEpoch(), t.uid, u.token}) ? "queued" : "queue full"));
             return false;
-        default: out("ERROR: " + r.reason); return false;
+        default: out("ERROR: " + reasonWords(r.reason).hint + " (" + r.reason + ")"); return false;
     }
 }
 
@@ -172,7 +172,7 @@ uint32_t cbIssue(cmd *c) {
     }
     IssueReply r = issueCard(cmd.getArgument(0).getValue());
     if (r.status != API_OK) {
-        out("ERROR: " + r.reason);
+        out("ERROR: " + reasonWords(r.reason).hint + " (" + r.reason + ")");
         return false;
     }
     out("Card URL: " + r.url);

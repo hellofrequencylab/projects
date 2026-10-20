@@ -8,7 +8,34 @@
 
 namespace freq {
 
-const char *NOT_SET_UP_TEXT = "Frequency backend not set up for devices yet";
+Words reasonWords(const String &code) {
+    static const struct {
+        const char *code, *title, *hint;
+    } WORDS[] = {
+        {"already_captured", "ALREADY IN", "Already checked in. See you next time!"},
+        {"unknown_card", "UNKNOWN CARD", "Not a card from this Space. Issue a new one."},
+        {"card_mismatch", "CARD MISMATCH", "This card looks copied. Issue a new one."},
+        {"checkin_not_set_up", "NOT SET UP", "Turn on check-in in Space settings."},
+        {"unknown_node", "NOT SET UP", "Turn on check-in in Space settings."},
+        {"inactive", "CHECK-IN PAUSED", "Turn check-in back on in Space settings."},
+        {"not_yet_valid", "NOT OPEN YET", "This check-in has not started yet."},
+        {"expired", "CHECK-IN ENDED", "This check-in has closed."},
+        {"bad_signature", "LINK OUT OF DATE", "Re-pair this scanner in Space settings."},
+        {"location_required", "NEEDS A PHONE", "This check-in needs the member's phone."},
+        {"too_far", "TOO FAR AWAY", "This check-in only works at the venue."},
+        {"capacity_reached", "FULL UP", "This check-in has reached capacity."},
+        {"device_unauthorized", "NOT PAIRED", "Pair it: Space > Check-in & scanners."},
+        {"rate_limited", "SLOW DOWN", "Lots of taps. Try again in 30 seconds."},
+        {"not_enabled", "SCANNERS OFF", "Device scans are off on frequencylocal.com."},
+        {"invalid_input", "TAP AGAIN", "Hold the card flat and still."},
+        {"unknown_member", "NO SUCH MEMBER", "Check the handle and try again."},
+        {"too_many_cards", "CARD LIMIT", "That member has the most cards allowed."},
+        {"internal", "SERVER HICCUP", "Frequency had a hiccup. Try again."},
+    };
+    for (const auto &w : WORDS)
+        if (code == w.code) return {w.title, w.hint};
+    return {"DIDN'T WORK", code};
+}
 
 namespace {
 
@@ -56,7 +83,7 @@ ApiStatus post(const String &path, const JsonDocument &req, Response &res, Strin
         return API_OFFLINE;
     }
     if (res.code == 404) {
-        reason = NOT_SET_UP_TEXT;
+        reason = "not_enabled";
         return API_NOT_SET_UP;
     }
     if (res.code >= 500) {

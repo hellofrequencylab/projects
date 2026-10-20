@@ -1,5 +1,7 @@
 #include "RemoteMenu.h"
 
+#include "../ui/cyber_icon.h"
+
 #include "../ui/rainbow.h"
 #include "core/display.h"
 #include "core/scrollableTextArea.h"
@@ -124,19 +126,9 @@ void RemoteMenu::showHelp() {
 }
 
 void RemoteMenu::drawIcon(float scale) {
+    // Pixel-art icon from design/icons (apps/ui/cyber_icons.h).
     clearIconArea();
-    // A phone with signal arcs.
-    int w = scale * 26, h = scale * 46;
-    int x = iconCenterX - w / 2 - scale * 10, y = iconCenterY - h / 2;
-    tft.drawRoundRect(x, y, w, h, scale * 4, bruceConfig.priColor);
-    tft.fillRect(x + scale * 3, y + scale * 6, w - scale * 6, h - scale * 14, cyberHue(200));
-    tft.fillCircle(x + w / 2, y + h - scale * 4, scale * 2, bruceConfig.priColor);
-    // Signal bars beside it.
-    int bx = x + w + scale * 6, base = iconCenterY + scale * 8;
-    for (int i = 0; i < 4; i++) {
-        int bh = scale * (6 + i * 7);
-        tft.fillRect(bx + i * scale * 7, base - bh, scale * 5, bh, cyberHue(160 + i * 50));
-    }
+    cyberIcon(getName().c_str(), iconCenterX, iconCenterY, max(2, (int)(scale * 2.4f + 0.5f)), true);
 }
 
 static uint32_t remoteCallback(cmd *c) {

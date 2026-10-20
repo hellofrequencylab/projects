@@ -2,11 +2,11 @@
 
 #include <globals.h>
 
-uint16_t cyberHue(int hue) {
+namespace {
+void hueRgb(int hue, uint8_t &r, uint8_t &g, uint8_t &b) {
     hue %= 360;
     if (hue < 0) hue += 360;
     int sector = hue / 60, f = (hue % 60) * 255 / 60;
-    uint8_t r, g, b;
     switch (sector) {
         case 0: r = 255, g = f, b = 0; break;
         case 1: r = 255 - f, g = 255, b = 0; break;
@@ -15,14 +15,26 @@ uint16_t cyberHue(int hue) {
         case 4: r = f, g = 0, b = 255; break;
         default: r = 255, g = 0, b = 255 - f; break;
     }
-    return ((r & 0xF8) << 8) | ((g & 0xFC) << 3) | (b >> 3);
+}
+uint16_t pack565(uint8_t r, uint8_t g, uint8_t b) { return ((r & 0xF8) << 8) | ((g & 0xFC) << 3) | (b >> 3); }
+} // namespace
+
+uint16_t cyberHue(int hue) {
+    uint8_t r, g, b;
+    hueRgb(hue, r, g, b);
+    return pack565(r, g, b);
 }
 
 uint16_t cyberItemColor(int index, int count) {
     if (count <= 0) count = 1;
     // Start at hot pink and walk the wheel; never fewer than 30 degrees apart.
-    int step = max(30, 360 / count);
-    return cyberHue(300 + index * step);
+    int hue = (300 + index * max(30, 360 / count)) % 360;
+    uint8_t r, g, b;
+    hueRgb(hue, r, g, b);
+    if (hue >= 200 && hue <= 290) { // deep blue is ~2:1 on black: lift it toward white
+        r += (255 - r) * 45 / 100, g += (255 - g) * 45 / 100, b += (255 - b) * 45 / 100;
+    }
+    return pack565(r, g, b);
 }
 
 int cyberPhase() { return (int)((millis() / 25) % 360); }

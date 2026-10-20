@@ -1,5 +1,7 @@
 #include "LightMenu.h"
 
+#include "../ui/cyber_icon.h"
+
 #include "../cyd_pins.h"
 #include "../ui/rainbow.h"
 #include "core/display.h"
@@ -105,16 +107,9 @@ void meter() {
 void LightMenu::optionsMenu() { meter(); }
 
 void LightMenu::drawIcon(float scale) {
+    // Pixel-art icon from design/icons (apps/ui/cyber_icons.h).
     clearIconArea();
-    // A sun: rainbow rays round a hot-pink core.
-    int cx = iconCenterX, cy = iconCenterY;
-    int r = scale * 13, r1 = scale * 19, r2 = scale * 30;
-    for (int a = 0; a < 360; a += 30) {
-        float rad = a * DEG_TO_RAD;
-        float c = cosf(rad), s = sinf(rad);
-        tft.drawWideLine(cx + c * r1, cy + s * r1, cx + c * r2, cy + s * r2, max(2.0f, scale * 3), cyberHue(a));
-    }
-    tft.fillCircle(cx, cy, r, cyberHue(320));
+    cyberIcon(getName().c_str(), iconCenterX, iconCenterY, max(2, (int)(scale * 2.4f + 0.5f)), true);
 }
 
 static uint32_t lightCallback(cmd *c) {
