@@ -39,6 +39,11 @@ User-tunable values go in `boot.conf` → `-D` macros via `PLATFORMIO_BUILD_FLAG
   icon colours) calls `apps/ui/rainbow.h`; default colours hot pink / cyan
 - `0009` de-brand: every user-visible "Bruce" (Wi-Fi/BLE names, AP + web defaults,
   mDNS `unicorn.local`, NDEF/QR defaults, pwnagotchi, GPX) + rainbow web UI CSS
+- `0014` remote hooks (apps/hooks.h): every raw CLI line goes to `cyberAppsHandleLine()`
+  before SimpleCLI (which strips quotes, so JSON can't be a normal argument);
+  `cyberAppsBoot()` at the end of setup; while the BLE API is on, the CLI task still
+  reads USB and answers on the source transport; `rpc` lines skip the `# ` prompt
+  and the back-to-menu; `isBLEAPIEnabled()`; BLE advertised name `CU5K`
 
 (No 0002: the nm-rf-hat cat scene was dropped for the unicorn.) Macros in 0003–0004
 keep their `NM_` prefix from `nm-rf-hat/`; renaming them is churn.
@@ -54,6 +59,22 @@ source published if builds are distributed.
 ## Our apps (`apps/`, copied to `src/cyber_apps/`)
 
 - `apps.h` — registry: menu members, menu order, CLI commands. Add new apps here.
+- `frequency/` — **Frequency**, NFC tool for the Frequency loyalty platform
+  (frequency-web). Programs + verifies venue check-in (`/n/…?s=v1…`) and event
+  (`/q/…?m=nfc`) tags on the PN532, optional permanent NTAG lock, write log
+  `/frequency/written.csv`, pick list `/frequency/tags.txt` (SD or LittleFS).
+  Member scan / issue card use a **proposed** device API that frequency-web
+  doesn't have yet (off by default; contract in `apps/frequency/BACKEND.md`).
+  NVS namespace `frequency`. CLI: `frequency status|read|tag|tags|log|scan|issue|queue|config`.
+  Uses Bruce's `PN532` (`read()`, `write_ndef()` with `rawNdefRecord`, since
+  `buildNdefMessage` caps URIs at 99 chars). Not yet tested with real tags.
+- `hooks.h` — what patch 0014 calls: raw-line hook and boot hook.
+- `remote/` — **Remote**: phone control (Frequency Experience) — JSON `rpc` lines over
+  USB serial and BLE, contract in [`apps/remote/PROTOCOL.md`](apps/remote/PROTOCOL.md).
+  Apps add a command with one line, `REMOTE_COMMAND("name", handler)` (`remote/remote.h`).
+  Menu app: live status, recent commands, Bluetooth now / at boot (NVS `remote/bleboot`).
+  CLI: `remote [ble on|off] [boot on|off]`. Android must open the CH340 with DTR/RTS
+  off. BLE replies are split to MTU−3 per notification. Not yet tested on hardware.
 - `hat/` — **Hat**: probes which hat module is live (I2C 0x24 for PN532, CC1101
   PARTNUM/VERSION, nRF24 SETUP_AW, RX-pin noise for IR/433). CLI: `hat`.
   Verified: PN532 detected with DIP 3 on. IR/433 is a heuristic — unverified.
@@ -65,6 +86,61 @@ source published if builds are distributed.
   `lightshow` (pin, zigzag, rotate, level, scene). Default data pin **27** (Grove
   SDA): needs DIP 1-5 OFF, and the app refuses to start if a hat module answers.
   Panel V+ needs its own 5 V; brightness capped at 40%. Not yet tested with a panel.
+  Remote: `lightshow.state` / `lightshow.set` leave requests in a shared struct the
+  show loop reads each frame; a remote start goes through `forceMenuOption`, so it
+  only works from the main menu.
+- `sensors/` — **Sensors**: hub for external sensors. Wired: scans the Grove I2C
+  bus (via `probeHat()`, then `acquireI2CBus()`) and reads BME280/BMP280, SHT3x,
+  AHT2x, BH1750, SGP30, MPU6050 family, INA219 with our own register-level drivers
+  (`i2c_sensors.cpp`; no lib_deps added — Bruce 1.16.1 does **not** link SensorLib).
+  Refuses wired sensors if the CC1101/nRF24 answers (they own 22/27). Wireless:
+  ESP-NOW receiver for our node packet (`sensor_packet.h`, docs `PROTOCOL.md`;
+  node projects copy the header unchanged), on channel 1 unless Wi-Fi is up.
+  Screens: live list (wired + nodes), big number + sparkline, Altimeter (relative
+  altitude from any pressure channel, SEL zeroes, RAM only). CSV log every 10 s
+  (NVS `sensors/log`) to `SD:/sensors/log.csv` (rotates at 4 MB) or
+  `LittleFS:/sensors.csv` (rotates at 24 KB, keeps one `.1`, stops below 32 KB free).
+  CLI: `sensors`, `sensors scan`, `sensors listen [s]`, `sensors log on|off`.
+  **ESP-NOW ownership:** only one receive callback exists. The hub inits ESP-NOW
+  only while a Sensors screen or `sensors listen` runs and fully deinits after;
+  Bruce's file sharing (`core/connect`) does the same, and both are modal.
+  Any CLI command except nav/option calls `backToMenu()`, so `sensors` typed
+  while the screen is open prints, then exits the screen. Not yet hardware-tested.
+- `cyd_pins.h` — the CYD's own extras (RGB LED 4/16/17, LDR 34, speaker 26), shared
+  by the four apps below. Bruce's CYD build drives none of them (`RGB_LED=-1`, no
+  `BUZZ_PIN`/`HAS_NS4168_SPKR`, no LDR code). Pins are the common CYD schematic,
+  **not yet confirmed on this unit**; LED polarity and LDR direction are constants there.
+- `led/` — **LED**: onboard RGB LED on LEDC PWM (colour picker, rainbow cycle,
+  breathe, presets, off). Attaches at 5 kHz/8 bit to share the backlight's LEDC
+  timer: never retune it. A picked colour stays lit after exit; animations stop.
+  CLI: `led <r> <g> <b>` / `led off`.
+- `light/` — **Light**: LDR meter on GPIO34 (ADC1, 0 dB attenuation, 8-sample
+  average): big %, raw/mV/min/max, rainbow bar, scrolling history. CLI: `light`.
+- `sound/` — **Sound**: LEDC square wave on GPIO26 (test tone, unicorn jingle,
+  100 Hz-8 kHz sweep, alerts, 5-step volume = duty, NVS `cybersnd`/`vol`). Takes its
+  own LEDC timer (attaches at an odd 1001 Hz) because it retunes per note; detaches
+  and holds the pin LOW after. CLI: `tone <hz> [ms] [vol]`, `tone jingle|sweep|ok|alert|error`
+  (Bruce's own `tone` only exists with `BUZZ_PIN`, which the CYD build lacks).
+- `gpio/` — **GPIO**: on-screen read (floating/pull-up/pull-down, edge count, logic
+  trace) / toggle / PWM for the only free pins: 22, 27 (hat-shared: runs the Hat
+  probe and refuses if PN532/CC1101/nRF24 answers) and 35 (input only). CLI: `pins`
+  (level + current periman owner). Bruce's `gpio` commands are untouched.
+- `slideshow/` — **Slideshow**: plays `.jpg/.jpeg/.png/.bmp/.gif` from `/slides`
+  (SD, else LittleFS), sorted by name. Stills hold for the slide time, GIFs play once
+  (15 s cap), as in the launcher's `slideshow.py`. NEXT/SEL next, PREV back, ESC exit.
+  NVS `slideshow` (`ms`, `loop`). Uses Bruce's `drawImg`/`showJpeg` and its `Gif`
+  class frame by frame. JPEGs are loaded whole into RAM: oversized ones are skipped
+  with a caption. No scaling: 320×240 or smaller. The LED-panel mirror was not ported.
+  CLI: `slides` lists what it would play.
+- `weather/` — **Weather**: synthwave card (gradient sky, striped sun, magenta grid,
+  pixel-art WMO icons, temps coloured by value) + 3-day strip, and an Indoor page.
+  Data: Open-Meteo (HTTPS, no key); location from ipwho.is (fallback ip-api.com,
+  plain HTTP) unless lat/lon are set. The launcher folder had no weather code, only
+  its `settings.toml` keys, so the sources are our choice. Only fetches when the app is
+  open (or `weather` is typed) and Wi-Fi is already up; SEL offers Bruce's Wi-Fi menu.
+  NVS `weather` (`metric`, `manual`, `lat`, `lon`, `city`). Indoor reading comes from
+  `weather::indoorClimate()`, a weak hook the Sensors app overrides. CLI: `weather`,
+  `weather units metric|imperial`, `weather loc <lat> <lon> [city]`, `weather loc auto`.
 - `boot/` — unicorn boot scene. `unicorn_sprite.h` is generated by
   `assets/make_unicorn.py` (also writes preview PNGs); edit the grids there.
 - `ui/` — rainbow helpers used by patch 0008.
@@ -112,6 +188,10 @@ the pinned tag — not memory, not `main`. Board pins:
    cache. Symptom: `cannot find -lnet80211`. Fix: rename `libnet80211.a.old`
    back, delete `lib/.patched`, rebuild with `.venv/bin` on PATH (build.sh does this).
 8. Boot tagline is drawn in the touch footer; ~26 chars fit at 320 px.
+9. **Never `serialDevice->printf` with arguments.** Bruce 1.16.1's `USBSerial::vprintf`
+   (`src/core/USBSerial/USBSerial.h`) passes its `va_list` to the variadic `printf`, so
+   arguments print as garbage and a `%s` crashes the board (seen 2026-10-19 with `pins`).
+   `snprintf` into a buffer, then `serialDevice->println(String(buf))`.
 
 ## Recovery
 

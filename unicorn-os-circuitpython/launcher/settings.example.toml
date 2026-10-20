@@ -1,0 +1,19 @@
+# Copy this file to settings.toml on CIRCUITPY (settings.toml is gitignored; never commit real credentials).
+# Wi-Fi: remove the leading "# " and fill these in. Extra networks: WIFI2_SSID/WIFI2_PASSWORD, WIFI3_*.
+# Optional Light Show wiring: LS_PIN = "D5", LS_ZIGZAG = "0", LS_ROTATE = "0".
+# CIRCUITPY_WIFI_SSID = "your network name"
+# CIRCUITPY_WIFI_PASSWORD = "your wifi password"
+
+# "imperial" (F, inHg, ft, mph) or "metric" (C, hPa, m, km/h)
+WEATHER_UNITS = "imperial"
+
+# Correction for the indoor sensor, in the units above (e.g. -20 if it reads 20 degrees high)
+WEATHER_TEMP_OFFSET = "0"
+
+# Optional: exact location. Without these, it's estimated from your internet connection.
+# WEATHER_LAT = "37.77"
+# WEATHER_LON = "-122.42"
+# WEATHER_CITY = "San Francisco"
+
+# Slideshow: seconds each still picture stays up (GIFs play through once). Loops forever.
+SLIDE_SECONDS = "1"

@@ -1,0 +1,143 @@
+diff --git a/src/core/serial_commands/cli.cpp b/src/core/serial_commands/cli.cpp
+index d50add3..2b4f8c1 100644
+--- a/src/core/serial_commands/cli.cpp
++++ b/src/core/serial_commands/cli.cpp
+@@ -15,6 +15,7 @@
+ #include "util_commands.h"
+ #include "wifi_commands.h"
+ #include "cyber_apps/apps.h"
++#include "cyber_apps/hooks.h"
+ #include <globals.h>
+ 
+ void cliErrorCallback(cmd_error *e) {
+@@ -32,6 +33,12 @@ void cliErrorCallback(cmd_error *e) {
+ 
+ SerialCli::SerialCli() { setup(); }
+ 
++bool SerialCli::parse(const String &input) {
++    bool result;
++    if (cyberAppsHandleLine(input, result)) return result;
++    return _cli.parse(input);
++}
++
+ void SerialCli::setup() {
+     _cli.setOnError(cliErrorCallback);
+ 
+diff --git a/src/core/serial_commands/cli.h b/src/core/serial_commands/cli.h
+index 89104db..ab9d6d1 100644
+--- a/src/core/serial_commands/cli.h
++++ b/src/core/serial_commands/cli.h
+@@ -10,7 +10,9 @@ public:
+     void setup(void);
+ 
+     SimpleCLI getCli() { return _cli; };
+-    bool parse(const String &input) { return _cli.parse(input); }
++    // CyberUnicorn: our apps see the raw line first (SimpleCLI strips quotes, which
++    // breaks JSON); see cyber_apps/hooks.h.
++    bool parse(const String &input);
+ 
+ private:
+     SimpleCLI _cli;
+diff --git a/src/core/serialcmds.cpp b/src/core/serialcmds.cpp
+index edcbcd8..87e06d4 100644
+--- a/src/core/serialcmds.cpp
++++ b/src/core/serialcmds.cpp
+@@ -44,19 +44,34 @@ void handleSerialCommands(SerialCli &serialCli) {
+             Serial.printf("[CLI] Result: %s\n", result ? "TRUE" : "FALSE");
+         }
+     }
+-    if (!serialDevice->available()) return;
++    // CyberUnicorn: while the BLE API owns serialDevice, keep reading USB too, and
++    // answer each command on the transport it came in on.
++    SerialDevice *src = serialDevice;
++    if (!src->available()) {
++        if (src == &USBserial || !USBserial.available()) return;
++        src = &USBserial;
++    }
++    SerialDevice *owner = serialDevice;
++    serialDevice = src;
+ 
+-    String cmd_str = serialDevice->readStringUntil('\n');
++    String cmd_str = src->readStringUntil('\n');
+     Serial.println("COMMAND: " + cmd_str);
+     serialCli.parse(cmd_str);
+-    serialDevice->print("# "); // prompt
++    String cmd_trimmed = cmd_str;
++    cmd_trimmed.trim();
++    // CyberUnicorn: no prompt after `rpc` (it has no newline, so it would glue onto
++    // the next protocol line the phone reads).
++    if (!cmd_trimmed.startsWith("rpc ")) src->print("# "); // prompt
++    if (serialDevice == src) serialDevice = owner; // unless the command switched transport
+ 
+     // forced menu redrawn if the command is not "nav" or "option"
+     // it allows navigation commands to be executed without returning to the menu, while other commands will
+     // return to the menu after execution.
+-    String cmd_trimmed = cmd_str;
+-    cmd_trimmed.trim();
+-    if (!cmd_trimmed.startsWith("nav") && !cmd_trimmed.startsWith("option")) { backToMenu(); }
++    // CyberUnicorn: `rpc` decides for itself (a phone poll must not kick the user out).
++    if (!cmd_trimmed.startsWith("nav") && !cmd_trimmed.startsWith("option") &&
++        !cmd_trimmed.startsWith("rpc ")) {
++        backToMenu();
++    }
+ }
+ 
+ void _serialCmdsTaskLoop(void *pvParameters) {
+diff --git a/src/core/settings.cpp b/src/core/settings.cpp
+index acc54e4..7e2c881 100644
+--- a/src/core/settings.cpp
++++ b/src/core/settings.cpp
+@@ -1683,6 +1683,8 @@ void enableBLEAPI() {
+     ble_api_enabled = !ble_api_enabled;
+ }
+ 
++bool isBLEAPIEnabled() { return ble_api_enabled; }
++
+ bool appStoreInstalled() {
+     FS *fs;
+     if (!getFsStorage(fs)) {
+diff --git a/src/core/settings.h b/src/core/settings.h
+index 062f413..5b287dc 100644
+--- a/src/core/settings.h
++++ b/src/core/settings.h
+@@ -109,6 +109,7 @@ void setMacAddressMenu();
+ 
+ #if !defined(LITE_VERSION)
+ void enableBLEAPI();
++bool isBLEAPIEnabled(); // CyberUnicorn: Remote app
+ 
+ bool appStoreInstalled();
+ 
+diff --git a/src/main.cpp b/src/main.cpp
+index 873bd4e..558bfc8 100644
+--- a/src/main.cpp
++++ b/src/main.cpp
+@@ -174,6 +174,7 @@ volatile int tftHeight = VECTOR_DISPLAY_DEFAULT_WIDTH;
+ #include "core/mykeyboard.h"
+ #include "core/sd_functions.h"
+ #include "core/serialcmds.h"
++#include "cyber_apps/hooks.h"
+ #include "core/settings.h"
+ #include "core/wifi/webInterface.h"
+ #include "core/wifi/wifi_common.h"
+@@ -583,6 +584,7 @@ void setup() {
+         );
+     }
+ #endif
++    cyberAppsBoot(); // CyberUnicorn: e.g. Bluetooth remote at boot
+     //  start a task to handle serial commands while the webui is running
+     startSerialCommandsHandlerTask(true);
+ 
+diff --git a/src/modules/ble_api/ble_api.cpp b/src/modules/ble_api/ble_api.cpp
+index 53d6c22..e2a5ca5 100644
+--- a/src/modules/ble_api/ble_api.cpp
++++ b/src/modules/ble_api/ble_api.cpp
+@@ -33,7 +33,7 @@ void BLE_API::setup() {
+ 
+     BLEAdvertising *pAdvertising = pServer->getAdvertising();
+     pAdvertising->enableScanResponse(false); // Save some battery
+-    pAdvertising->setName("Bruc");           // Bruce is too long for adv packet len
++    pAdvertising->setName("CU5K");           // CyberUnicorn 5000; longer won't fit the adv packet
+     pAdvertising->start();
+ }
+ 

@@ -1,0 +1,84 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Unicorn OS</title>
+<style>
+:root{--bg:#1a0f2e;--card:#2e1d4f;--line:#4b3672;--fg:#fff4fb;--dim:#b9a5da;--pink:#ff9edb;--mint:#8ef0c5;
+--blue:#7fdbff;--butter:#ffd98a;--rose:#ff8fb1;--lav:#c9a7ff;--gold:#ffd24d;
+--rainbow:linear-gradient(90deg,#ff8fb1,#ffc48a,#fff08a,#8ef0c5,#7fdbff,#c9a7ff)}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.4 -apple-system,system-ui,sans-serif}
+header{padding:22px 16px 10px;text-align:center}h1{margin:0;font-size:30px;background:var(--rainbow);-webkit-background-clip:text;color:transparent}
+.bar{height:4px;background:var(--rainbow);border-radius:4px;margin:10px auto 0;max-width:260px}
+.sub{color:var(--dim);margin-top:6px}main{max-width:720px;margin:0 auto;padding:8px 16px 40px;display:grid;gap:14px}
+.card{background:var(--card);border-radius:22px;padding:16px 18px}h2{margin:0 0 12px;font-size:16px;color:var(--pink)}
+h2 span{margin-right:6px}.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px}
+button{font:inherit;color:var(--fg);background:var(--bg);border:2px solid transparent;border-radius:16px;padding:10px 12px;cursor:pointer;text-align:left}
+button:hover{border-color:var(--line)}button.on{border-color:var(--pink);background:#3a2160}
+.stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.stat{background:var(--bg);border-radius:16px;padding:10px 12px}.stat b{display:block;font-size:20px}.stat small{color:var(--dim)}
+.pill{height:8px;border-radius:8px;background:var(--line);margin-top:6px;overflow:hidden}.pill i{display:block;height:100%;border-radius:8px}
+.row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0;border-top:1px solid var(--line)}
+.row:first-of-type{border-top:0}.seg{display:flex;gap:6px;flex-wrap:wrap}.seg button{padding:6px 12px;text-align:center}
+input[type=range]{width:100%;accent-color:#ff9edb}a{color:var(--blue)}.big{font-size:40px;font-weight:700}
+.now{display:inline-block;padding:4px 12px;border-radius:12px;background:var(--bg);color:var(--mint)}footer{text-align:center;color:var(--dim)}
+.off{opacity:.5}
+</style></head><body>
+<header><h1>&#129412; Unicorn OS</h1><div class="bar"></div>
+<div class="sub">your Feather, live &middot; <span class="now" id="now">connecting&hellip;</span></div></header>
+<main>
+<section class="card"><h2><span>&#10024;</span>Open an app</h2><div class="grid" id="apps"></div></section>
+
+<section class="card"><h2><span>&#127752;</span>Light Show</h2>
+<div class="grid" id="scenes"></div>
+<div class="row"><div>Brightness</div><div class="seg" id="bright"></div></div>
+<div class="row" style="display:block"><div>Speed <span id="spv">1.0&times;</span></div>
+<input type="range" id="speed" min="0.25" max="3" step="0.05" value="1"></div>
+<div class="sub" id="lsnote"></div></section>
+
+<section class="card"><h2><span>&#128151;</span>Vitals</h2><div class="stats" id="vitals"></div></section>
+
+<section class="card"><h2><span>&#127956;</span>Altimeter</h2>
+<div class="big" id="alt">&ndash;</div><div class="sub" id="altsub"></div>
+<p><a href="/api/altlog.csv">Download the altitude log (CSV)</a></p></section>
+
+<section class="card"><h2><span>&#9881;&#65039;</span>Settings</h2><div id="settings"></div></section>
+<footer>Files &amp; code editor: <a id="files" href="#">CircuitPython dashboard</a></footer>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+const post=(u,d)=>fetch(u,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)}).then(refresh);
+const SET=[["screen","Screen",[[0.25,"25%"],[0.5,"50%"],[0.75,"75%"],[1,"100%"]]],
+["status_led","Status light",[[0,"off"],[1,"low"],[2,"medium"],[3,"high"]]],
+["units","Units",[["imperial","imperial"],["metric","metric"]]],
+["slide_seconds","Slide time",[[0.5,"0.5s"],[1,"1s"],[2,"2s"],[4,"4s"]]],
+["log_every","Alt log every",[[5,"5s"],[30,"30s"],[60,"1m"],[300,"5m"]]]];
+let dragging=false;$('files').href='http://'+location.hostname+':8080/';
+$('speed').oninput=e=>{dragging=true;$('spv').textContent=(+e.target.value).toFixed(2)+'×'};
+$('speed').onchange=e=>{dragging=false;post('/api/speed',{v:+e.target.value})};
+function seg(el,opts,cur,fn){el.innerHTML='';opts.forEach(([v,t])=>{const b=document.createElement('button');
+b.textContent=t;if(v===cur)b.className='on';b.onclick=()=>fn(v);el.appendChild(b)})}
+function pill(f,c){return `<div class="pill"><i style="width:${Math.round(f*100)}%;background:${c}"></i></div>`}
+function up(s){const h=Math.floor(s/3600),m=Math.floor(s/60)%60;return h?`${h}h ${m}m`:`${m}m ${s%60}s`}
+function refresh(){fetch('/api/status').then(r=>r.json()).then(d=>{
+const names=Object.fromEntries(d.apps);$('now').textContent='now: '+(names[d.app]||'menu');
+$('apps').innerHTML='';d.apps.forEach(([k,n])=>{const b=document.createElement('button');b.textContent=n;
+if(k===d.app)b.className='on';b.onclick=()=>post('/api/launch',{app:k});$('apps').appendChild(b)});
+$('scenes').innerHTML='';d.scenes.forEach((n,i)=>{const b=document.createElement('button');b.textContent=(i+1)+'. '+n;
+if(i===d.scene)b.className='on';b.onclick=()=>post('/api/scene',{i});$('scenes').appendChild(b)});
+seg($('bright'),[0,1,2,3,4].map(v=>[v,String(v+1)]),d.settings.led_level,v=>post('/api/settings',{led_level:v}));
+if(!dragging){$('speed').value=d.speed;$('spv').textContent=d.speed.toFixed(2)+'×'}
+$('lsnote').textContent=d.app==='lightshow'?'Changes show on the panel right away.':'Open Light Show to see changes on the panel.';
+const mood=d.temp<45?['cool & cozy','var(--mint)']:d.temp<60?['warm & happy','var(--butter)']:['toasty!','var(--rose)'];
+$('vitals').innerHTML=`<div class="stat"><small>Chip</small><b style="color:${mood[1]}">${d.temp_text}</b><small>${mood[0]}</small></div>
+<div class="stat"><small>Memory free</small><b>${d.mem_free} KB</b>${pill(d.mem_used/(d.mem_used+d.mem_free),'var(--lav)')}</div>
+<div class="stat"><small>Storage free</small><b>${d.disk_free} KB</b>${pill(1-d.disk_free/d.disk_total,'var(--pink)')}</div>
+<div class="stat"><small>Wi-Fi</small><b>${d.ssid||'off'}</b><small>${d.rssi!=null?d.rssi+' dBm':''}</small></div>
+<div class="stat"><small>CPU</small><b>${d.cpu_mhz} MHz</b></div><div class="stat"><small>Uptime</small><b>${up(d.uptime)}</b></div>`;
+if(d.alt_m==null){$('alt').textContent='no sensor';$('altsub').textContent=''}else{
+$('alt').textContent=d.imperial?Math.round(d.alt_m*3.28084)+' ft':Math.round(d.alt_m)+' m';
+$('altsub').textContent=d.hpa+' hPa · standard-air estimate; changes are accurate'}
+const box=$('settings');box.innerHTML='';SET.forEach(([k,label,opts])=>{const row=document.createElement('div');
+row.className='row';row.innerHTML=`<div>${label}</div>`;const s=document.createElement('div');s.className='seg';
+seg(s,opts,d.settings[k],v=>post('/api/settings',{[k]:v}));row.appendChild(s);box.appendChild(row)});
+document.body.classList.remove('off')}).catch(()=>{$('now').textContent='reconnecting…';document.body.classList.add('off')})}
+refresh();setInterval(()=>{if(!dragging)refresh()},2000);
+</script></body></html>
