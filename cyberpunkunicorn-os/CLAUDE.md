@@ -15,7 +15,9 @@ build (copied, not shared — that project stays as the known-good fallback).
   app.bin size + sha256, offset 0x10000: what the website's updater reads)
 - CI: `.github/workflows/cyberpunkunicorn-os.yml` builds every push/PR touching this folder
   and fails if app.bin outgrows the 0x3C0000 app partition. Tag `cu5k-v<OS_VERSION>`
-  to publish a GitHub release with app.bin, full.bin and manifest.json
+  to publish a GitHub release with app.bin, full.bin and manifest.json (or Actions → Run workflow
+  on main with "release" ticked, which creates that tag itself: this cloud environment
+  can't push tags)
 - Flash: `./flash.sh` (app only, keeps on-device settings) or `./flash.sh --full`
 - Remote: `./remote.sh` mirrors the screen to http://localhost:8765 over serial
 - Test: none automated. A clean build is the minimum bar; confirm on the device
