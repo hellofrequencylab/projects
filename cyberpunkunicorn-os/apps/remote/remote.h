@@ -60,6 +60,15 @@ void emit(const char *name, JsonObjectConst data);
 // Handles one raw CLI line. Returns false if it isn't an `rpc` line.
 bool handleLine(const String &line);
 
+inline bool isRpcLine(const String &line) { return line.startsWith("rpc") && (line.length() == 3 || line[3] == ' '); }
+
+// Runs one trimmed `rpc {...}` line and returns the reply JSON (no "@rpc " prefix).
+// `transport` goes in the recent-command log ("usb", "ble", "net"). `allow`, when
+// set, refuses any command it returns false for (not_allowed). Handlers never run
+// two at a time, whatever link their lines came in on.
+using CommandFilter = bool (*)(const String &cmd);
+String runLine(const String &line, const char *transport, CommandFilter allow);
+
 // Bluetooth remote (Bruce's BLE API): on/off now, and the persisted boot setting.
 bool bleEnabled();
 bool bleSetEnabled(bool on); // false if refused (e.g. not enough free heap)

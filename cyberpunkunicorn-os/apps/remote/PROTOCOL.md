@@ -31,6 +31,7 @@ The phone side lives in `frequency-web`. Change both together.
 | `unknown_command` | no such `cmd` |
 | `not_available` | a v1 command whose app isn't in this build yet (see §3), or an app hidden from the menu |
 | `bad_args` | an arg is missing or out of range; `message` says which |
+| `not_allowed` | the command isn't allowed over this link (the internet relay, §6) |
 | `busy` | the device can't do that right now (e.g. the hat pins are in use); `message` says why |
 
 ### How `rpc` is wired (implementation note)
@@ -441,72 +442,58 @@ screen from a handler: leave a request for the app's own loop
 (`apps/lightshow/LightShowMenu.cpp` shows the pattern). To send an event, call
 `remote::emit("name", obj)`.
 
-## 6. Internet relay (website side built, device side not)
+## 6. Internet relay (`apps/remote/relay.cpp`)
 
-frequency-web now has `POST /api/v1/devices/realtime-token` (LIVE-1155), behind
-`DEVICE_RELAY_ENABLED`. Its allow-list includes `led.mode`, which this firmware
-answers `not_available`. The device-side Realtime client below is not built yet.
+Both halves are built. frequency-web: `POST /api/v1/devices/realtime-token`
+(LIVE-1155, ADR-1870, LOYALTY §8) behind `DEVICE_RELAY_ENABLED`. Device: the
+`cu_relay` task below. Not yet run against the live site.
 
 Goal: control the device from any network. Neither side needs an open port. Both
 are clients of **Supabase Realtime** (frequency-web's backend), meeting on a
 private channel per device.
 
 ```
-phone app ──(user session JWT)──► Realtime channel "device:<id>" ◄──(device token)── CyberUnicorn
-                                   broadcast "rpc" / "@rpc" / "@evt"
+website / phone ──(member session)──► Realtime channel "device:<id>" ◄──(device token)── CyberUnicorn
+                                       broadcast "rpc" / "reply" / "evt"
 ```
 
 ### Device side
 
-1. **Identity.** The device already has `X-Frequency-Device: <uuid>.<secret>` from
-   the frequency-web device API (session `fw-devices`, branch `live/nfc-device-checkin`:
-   `POST /api/v1/devices/scan`, `/devices/cards`). The relay reuses it. Nothing new
-   is stored on the device.
-2. **Token.** With Wi-Fi up (station mode) and *Internet remote* switched on (new NVS
-   key `remote/relay`, default off), the device calls
-   `POST /api/v1/devices/realtime-token` with that header. The reply is
-   `{ok, token, expires_at, channel:"device:<uuid>", realtime_url}`: a Supabase-signed
-   JWT that lives ~15 min, with `role: authenticated`, `sub: device:<uuid>` and a
-   claim limiting it to that one channel. The device re-mints it ~2 min before
-   expiry, or on a 401. Same flat `{ok, reason}` error replies and `Retry-After` as the
-   existing device API.
-3. **Connection.** A WebSocket (`wss://<project>.supabase.co/realtime/v1/websocket?apikey=<anon>&vsn=1.0.0`)
-   using the ESP32 core's `WiFiClientSecure` plus a small Phoenix-protocol client:
-   `phx_join` on `realtime:device:<uuid>` with `config.private=true` and
-   `access_token=<token>`, a `heartbeat` every 25 s, and `access_token` pushes on
-   refresh. A minimal client is ~10 KB of flash. TLS costs ~40 KB of heap while
-   connected, so **BLE and the relay shouldn't run at the same time** on this board.
-   The Remote app enforces one or the other.
-4. **Payloads: the same protocol, untouched.** The phone broadcasts event `rpc` with
-   payload `{line:"rpc {...}"}`. The device passes `line` to the same
-   `remote::handleLine()` with a third "relay" transport (a `SerialDevice` that buffers
-   the reply line) and broadcasts event `reply` with `{line:"@rpc {...}"}`. `@evt`
-   lines go out as event `evt`. The phone reuses its line parser unchanged.
-5. **Safety.** The relay accepts only `rpc` lines (no raw CLI), and `cli.run` is
-   **disabled over the relay**: it would be remote shell access. Only an explicit
-   allow-list goes over the internet: `system.status`, `apps.list`, `lightshow.*`,
-   `led.*`, `sound.tone`, `light.read`, `sensors.read`, `frequency.read_tag`. A device
-   setting can narrow it further. The screen shows a "remote: internet" badge while
-   joined.
-6. **Presence.** The device `track()`s `{online:true, version}` on the channel, so the
-   phone can show online/offline without polling.
+1. **Switch.** *Internet remote* in the Remote app, `remote relay on|off` over serial,
+   or `rpc remote.relay {"on":true}` over USB (NVS `remote/relay`, default off).
+   `system.status` gains `relay:{enabled, state, error?}`, `state` being `off`,
+   `waiting` (no Wi-Fi, not provisioned, Bluetooth on, or low RAM), `connecting`,
+   `online` or `refused` (the site said no: retried every 5 min, or at once on
+   off/on).
+2. **Identity.** The scanner key from `frequency.provision` (`X-Frequency-Device`).
+   Nothing new is stored.
+3. **Token.** `POST /api/v1/devices/realtime-token`, no body. Reply
+   `{ok, token, expires_at, channel:"device:<uuid>", realtime_url, apikey, allowed_cmds}`.
+   The JWT lives 15 min (`role: anon`, `sub` = the bare uuid, `frequency_kind: device`).
+   The device re-mints ~2 min before expiry and pushes `access_token` on the channel.
+   404 or `relay_disabled` puts the relay in `refused`.
+4. **Connection.** Our own small WebSocket client over `WiFiClientSecure` to
+   `realtime_url?apikey=<apikey>&vsn=1.0.0`, then `phx_join` on
+   `realtime:device:<uuid>` with `config.private=true`, `config.presence.key=<uuid>`
+   and `access_token`, a `heartbeat` every 25 s, and a presence `track` of
+   `{online:true, version}`. TLS costs ~40 KB of heap, so the relay **never runs
+   beside Bluetooth** and waits below 60 KB free. A Frequency check-in POST asks
+   it to close for 20 s when RAM is short (`relay::yieldTls()`). Only the relay task
+   touches the socket; events from other tasks are queued (up to 8).
+5. **Payloads: the same protocol.** The website broadcasts event `rpc` with
+   `{line:"rpc {...}"}`. The device runs it through the same `remote::runLine()` as
+   USB (logged as transport `net`) and broadcasts `reply` with `{line:"@rpc {...}"}`.
+   `@evt` lines go out as event `evt` with `{line:"@evt {...}"}`.
+6. **Safety.** Only `rpc` lines, never raw CLI. A command runs only if it is in the
+   token reply's `allowed_cmds` (the owner's list, from `RELAY_COMMANDS` in
+   frequency-web's `lib/devices/relay.ts`); anything else answers `not_allowed`.
+   `cli.run` and `remote.relay` are refused whatever the list says.
 
-### What frequency-web needs to add
+### Website side
 
-1. **`POST /api/v1/devices/realtime-token`**: authenticates `X-Frequency-Device` like
-   `/devices/scan`, and returns a short-lived JWT signed with the project's JWT
-   secret (server-side only) for `sub: device:<uuid>`, carrying a custom claim
-   `device_id`. Rate-limited like the other device routes.
-2. **Realtime authorization (RLS on `realtime.messages`)** for private channels:
-   - a device JWT may `select`/`insert` only on topic `device:<its device_id>`;
-   - a user JWT may do the same only for devices they own or manage: a join from
-     `realtime.topic()` → `device_id` → the existing devices table → the venue/owner
-     the user belongs to.
-3. **Device ownership / pairing**: a way to link a device to a user or venue if the
-   devices table doesn't already have one (it's created by the device API branch).
-   The phone app needs `GET /api/v1/me/devices` to list what it can control.
-4. **A device setting row** (`relay_enabled`, `relay_allowed_cmds`) so owners can
-   switch the relay off server-side. The token endpoint refuses when disabled.
-5. **Audit log** (optional): a table of relayed commands (device, user, cmd, ok, at),
-   written by the phone app or an Edge Function. Payloads stay on Realtime, not in the DB.
-6. Feature flag `DEVICE_RELAY_ENABLED`, off by default, like `SCANNER_DEVICES_ENABLED`.
+Built in frequency-web (LOYALTY §8): the token route, the `realtime.messages`
+policies, `GET/PATCH /api/v1/me/devices` (the owner turns `relayEnabled` on and
+narrows `allowedCmds`), and the `DEVICE_RELAY_ENABLED` switch. Still to build: a
+Realtime transport in `lib/device/` so the device page works by cable or over the
+internet, and an owner switch on the web (today only the PATCH route has it). Not
+built, optional: the audit table of relayed commands.

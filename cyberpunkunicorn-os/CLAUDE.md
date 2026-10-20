@@ -115,6 +115,12 @@ source published if builds are distributed.
   Boot ends with `@evt hello {proto, os, fw, commit, board}`; `system.caps` lists every
   registered command; `system.time {epoch}` sets the clock from the computer.
   `build.sh` stamps the git commit (`FW_COMMIT`, `-dirty` if apps/patches changed).
+  Internet relay (`relay.cpp`, PROTOCOL.md §6): task `cu_relay` mints a Realtime token
+  from frequency-web with the scanner key, joins `device:<id>` over our own TLS WebSocket
+  + Phoenix client, and runs broadcast `rpc` lines through `remote::runLine()` (shared
+  with USB; one handler at a time) against the token's `allowed_cmds`. NVS `remote/relay`
+  (off by default), `remote relay on|off`, `rpc remote.relay`. Never beside Bluetooth;
+  only the relay task touches the socket.
   CLI: `remote [ble on|off] [boot on|off]`. Android must open the CH340 with DTR/RTS
   off. BLE replies are split to MTU−3 per notification. Not yet tested on hardware.
 - `hardware/` — **Library** + hardware registry (`hardware.h`). Apps with a hardware

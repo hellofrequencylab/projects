@@ -3,6 +3,7 @@
 #include "../hardware/hardware.h"
 #include "../hat/hat_probe.h"
 #include "../lightshow/LightShowMenu.h"
+#include "relay.h"
 #include "core/display.h"
 #include "core/main_menu.h"
 #include "core/settings.h"
@@ -95,6 +96,11 @@ void writeLine(SerialDevice *dev, const String &line) {
     xSemaphoreGive(writeLock());
 }
 
+SemaphoreHandle_t commandLock() {
+    static SemaphoreHandle_t m = xSemaphoreCreateRecursiveMutex();
+    return m;
+}
+
 // ---- recent-command log ----------------------------------------------------------
 
 constexpr int LOG_SIZE = 8;
@@ -109,10 +115,10 @@ volatile uint32_t usbRpcMs = 0;
 volatile uint32_t hostEpochAt = 0;   // epoch seconds the host gave us
 volatile uint32_t hostEpochMs = 0;   // millis() when it did
 
-void logCommand(const String &cmd, bool ok, SerialDevice *dev) {
+void logCommand(const String &cmd, bool ok, const char *transport) {
     LogEntry e;
     e.ms = millis();
-    strlcpy(e.transport, dev == &USBserial ? "usb" : "ble", sizeof(e.transport));
+    strlcpy(e.transport, transport, sizeof(e.transport));
     strlcpy(e.cmd, cmd.c_str(), sizeof(e.cmd));
     e.ok = ok;
     portENTER_CRITICAL(&logMux);
@@ -191,6 +197,12 @@ void cmdSystemStatus(Request &r) {
     ble["enabled"] = bleEnabled();
     ble["connected"] = bleConnected();
     ble["at_boot"] = bleAtBoot();
+
+    JsonObject net = r.data["relay"].to<JsonObject>();
+    net["enabled"] = relay::enabled();
+    net["state"] = relay::stateText(relay::state());
+    String relayErr = relay::lastError();
+    if (relayErr.length()) net["error"] = relayErr;
 
     JsonObject hat = r.data["hat"].to<JsonObject>();
     JsonArray live = hat["live"].to<JsonArray>();
@@ -305,7 +317,17 @@ void cmdSystemTime(Request &r) {
     r.data["epoch"] = epoch;
 }
 
+// remote.relay {on?}: the internet relay switch (never allowed over the relay itself).
+void cmdRelay(Request &r) {
+    if (r.args["on"].is<bool>()) relay::setEnabled(r.args["on"].as<bool>());
+    r.data["enabled"] = relay::enabled();
+    r.data["state"] = relay::stateText(relay::state());
+    String e = relay::lastError();
+    if (e.length()) r.data["error"] = e;
+}
+
 REMOTE_COMMAND("system.status", cmdSystemStatus);
+REMOTE_COMMAND("remote.relay", cmdRelay);
 REMOTE_COMMAND("system.caps", cmdSystemCaps);
 REMOTE_COMMAND("system.time", cmdSystemTime);
 REMOTE_COMMAND("apps.list", cmdAppsList);
@@ -342,14 +364,10 @@ void emit(const char *name, JsonObjectConst data) {
     // Events go to USB always, and to the phone on BLE when that's on.
     writeLine(&USBserial, line);
     if (bleSerialActive() && bleConnected() > 0) writeLine(serialDevice, line);
+    relay::sendEvent(json); // and to the website over the internet relay, when it's joined
 }
 
-bool handleLine(const String &raw) {
-    String line = raw;
-    line.trim();
-    if (!line.startsWith("rpc") || (line.length() > 3 && line[3] != ' ')) return false;
-
-    SerialDevice *dev = serialDevice; // the transport this line came in on (patch 0014)
+String runLine(const String &line, const char *transport, CommandFilter allow) {
     JsonDocument in;
     JsonDocument out;
     String cmd;
@@ -374,10 +392,15 @@ bool handleLine(const String &raw) {
         out["ok"] = true;
         r.data = out["data"].to<JsonObject>();
 
-        if (dev == &USBserial) usbRpcMs = millis() | 1; // | 1: never 0, which means "never"
         Handler fn = cmd.isEmpty() ? nullptr : find(cmd);
-        if (fn) fn(r);
-        else if (planned(cmd)) r.fail("not_available", cmd + " isn't in this build yet");
+        if (allow && !cmd.isEmpty() && !allow(cmd)) r.fail("not_allowed", cmd + " isn't allowed over this link");
+        else if (fn) {
+            // One handler at a time, whichever link the line came in on: handlers
+            // share the hat pins, the reader and the screen-request flags.
+            xSemaphoreTakeRecursive(commandLock(), portMAX_DELAY);
+            fn(r);
+            xSemaphoreGiveRecursive(commandLock());
+        } else if (planned(cmd)) r.fail("not_available", cmd + " isn't in this build yet");
         else r.fail("unknown_command", cmd.isEmpty() ? String("cmd is required") : cmd);
 
         ok = !r.failed();
@@ -391,11 +414,21 @@ bool handleLine(const String &raw) {
 
     String json;
     serializeJson(out, json); // overwrites, never appends (ArduinoJson 7): see emit()
-    String reply = "\n@rpc " + json + "\n"; // leading \n: see emit()
+    logCommand(cmd, ok, transport);
+    return json;
+}
+
+bool handleLine(const String &raw) {
+    String line = raw;
+    line.trim();
+    if (!isRpcLine(line)) return false;
+
+    SerialDevice *dev = serialDevice; // the transport this line came in on (patch 0014)
+    if (dev == &USBserial) usbRpcMs = millis() | 1; // | 1: never 0, which means "never"
+    String reply = "\n@rpc " + runLine(line, dev == &USBserial ? "usb" : "ble", nullptr) + "\n"; // leading \n: see emit()
     // A command that switched Bluetooth off (cli.run "remote ble off") has no link
     // left to answer on.
     if (dev == &USBserial || bleEnabled()) writeLine(dev, reply);
-    logCommand(cmd, ok, dev);
     return true;
 }
 
@@ -441,6 +474,7 @@ void setBleAtBoot(bool on) {
 
 void boot() {
     if (bleAtBoot()) bleSetEnabled(true);
+    relay::boot(); // waits in the background for Wi-Fi; never beside Bluetooth
     // Tells a computer that just opened the port (which resets this board) that
     // the board is up and which protocol it speaks.
     JsonDocument hello;
