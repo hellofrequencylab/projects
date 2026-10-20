@@ -18,7 +18,7 @@ feature branch.
 | 4 | `claude/cu-onboard-apps-a451cf` | `60f7c78` `679a5af` `a9eefcb` `bd5f29b` | **LED, Light, Sound, GPIO** (+22,976 B with #5) | boots only |
 | 5 | (coordinator) | `dc7b609` | Remote commands wired to LED/Sound/Light/Sensors/Frequency (`apps/remote/app_handlers.cpp`) | no |
 | 6 | `claude/cu-onboard-apps-a451cf` | `c903a1d` | Fix: `pins` crash + garbage `light` (Bruce's broken `serialDevice->printf`) | no |
-| 7 | `claude/cu-launcher-ports-010d8c` | `8386991` `ade98e3` | **Slideshow** (`/slides` on SD/LittleFS) and **Weather** (synthwave card, Wi-Fi) (+24,912 B) | no |
+| 7 | `claude/cu-launcher-ports-010d8c` | `8386991` `ade98e3` `ef9c875` | **Slideshow** (`/slides` on SD/LittleFS) and **Weather** (synthwave card, Wi-Fi) (+24,912 B) | no |
 
 Conflicts were only in `apps/apps.h` (regenerated from the full app list), and in
 `CLAUDE.md`/`SCOPE.md` (both sides kept).
@@ -43,9 +43,15 @@ Serial smoke test, all with no crash or reboot:
 - Remote: `system.status`, `apps.list` (11 apps), `hat.probe`, `light.read`, `led.set`,
   `sensors.read`, `cli.run`, unknown command → `unknown_command`.
 - Bug found: replies lacked the `@rpc ` prefix (ArduinoJson 7 `serializeJson` overwrites
-  the string). Fixed in `def0228`; not yet re-flashed.
-- Not run: `slides`/`weather` (printf crash, fix pending on the ports branch); `frequency`
-  with real NTAG tags; LED colours, speaker and LDR direction by eye/ear.
+  the string). Fixed in `def0228`.
+
+00:45: re-flashed `5173195` (adds `def0228` + the slides/weather printf fix `ef9c875`).
+`slides` (no SD → "No pictures"), `weather` (no Wi-Fi), `pins`, `light` all clean;
+rpc replies now carry `@rpc `; `frequency.read_tag` with DIP 3 off → `no_reader`.
+
+**Still unverified on hardware:** Frequency with real NTAG tags (DIP 3 on); LED colours,
+speaker, LDR direction by eye/ear; Light Show with a real WS2812 panel; Sensors with a
+real I2C sensor or the sensor-node; the phone app over USB-OTG and Bluetooth.
 
 ## Board retest checklist (after flashing this branch)
 
