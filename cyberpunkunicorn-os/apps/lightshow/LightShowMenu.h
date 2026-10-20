@@ -19,3 +19,7 @@ private:
     void run();
     void pinMenu();
 };
+
+// True while the show loop owns the LED pin (remote commands check this before
+// touching the shared hat pins).
+bool lightshowRunning();

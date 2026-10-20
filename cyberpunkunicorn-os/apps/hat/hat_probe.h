@@ -37,5 +37,9 @@ struct HatProbeResult {
 
 HatProbeResult probeHat();
 
+// The most recent probeHat() result and its millis() timestamp; false if none yet.
+// Lets status screens report the hat without driving the shared pins again.
+bool lastHatProbe(HatProbeResult &out, uint32_t &atMs);
+
 // Human-readable report, one entry per line, shared by the screen and the CLI.
 std::vector<String> hatReportLines(const HatProbeResult &r);

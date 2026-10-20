@@ -7,17 +7,20 @@
 #include "frequency/FrequencyMenu.h"
 #include "hat/HatMenu.h"
 #include "lightshow/LightShowMenu.h"
+#include "remote/RemoteMenu.h"
 
 // Members of MainMenu (one instance per app).
 #define CYBER_APP_MEMBERS                                                                         \
     FrequencyMenu frequencyMenu;                                                                  \
     HatMenu hatMenu;                                                                              \
-    LightShowMenu lightShowMenu;
+    LightShowMenu lightShowMenu;                                                                  \
+    RemoteMenu remoteMenu;
 
 // Pointers listed first in the main menu, in this order.
-#define CYBER_APP_MENU_ITEMS &frequencyMenu, &lightShowMenu, &hatMenu,
+#define CYBER_APP_MENU_ITEMS &frequencyMenu, &lightShowMenu, &hatMenu, &remoteMenu,
 
 inline void cyberAppsCreateCommands(SimpleCLI *cli) {
     createHatCommand(cli);
     createFrequencyCommand(cli);
+    createRemoteCommand(cli);
 }

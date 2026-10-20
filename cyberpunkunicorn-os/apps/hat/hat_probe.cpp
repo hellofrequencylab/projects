@@ -154,6 +154,10 @@ String HatProbeResult::advice() const {
     return "Ready.";
 }
 
+static HatProbeResult lastResult;
+static uint32_t lastAt = 0;
+static bool haveLast = false;
+
 HatProbeResult probeHat() {
     HatProbeResult r;
     probeI2C(r);
@@ -161,7 +165,17 @@ HatProbeResult probeHat() {
     // driving those pins as SPI would fight it, so stop here.
     if (!r.pn532) probeSPI(r);
     if (r.liveCount() == 0) probeRxLine(r);
+    lastResult = r;
+    lastAt = millis();
+    haveLast = true;
     return r;
+}
+
+bool lastHatProbe(HatProbeResult &out, uint32_t &atMs) {
+    if (!haveLast) return false;
+    out = lastResult;
+    atMs = lastAt;
+    return true;
 }
 
 std::vector<String> hatReportLines(const HatProbeResult &r) {
