@@ -186,8 +186,12 @@ UrlCheck checkUrl(const String &raw) {
         String node = u.path.substring(3);
         if (!isUuid(node)) u.problem = "node id is not a UUID";
         else if (!isNodeSig(queryParam(query, "s"))) u.problem = "missing or bad ?s=v1... signature";
-        else if (queryParam(query, "m").length()) u.problem = "?m= is for /q/ links only";
-        else u.ok = true;
+        else if (queryParam(query, "m").length() && queryParam(query, "m") != "nfc") u.problem = "?m= on a /n/ link must be nfc";
+        else {
+            u.ok = true;
+            // Placards carry ?m=nfc too, so the site's Scan stats count them as taps.
+            if (queryParam(query, "m") != "nfc") u.fixed = url + "&m=nfc";
+        }
     } else if (u.path.startsWith("/q/")) {
         u.kind = URL_EVENT;
         String slug = u.path.substring(3);

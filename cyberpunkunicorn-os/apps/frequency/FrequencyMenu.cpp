@@ -165,7 +165,7 @@ void showTag(const CardInfo &c, const String &title, const String &headline, boo
         cyberLine(14, y += 12, "Points to", u.host, cyberHue(180));
         cyberLine(14, y += 12, "Path", u.path, kindColor(u.kind));
         if (u.kind == URL_VENUE) cyberLine(14, y += 12, "Signed", "yes (?s=v1...)", cyberHue(120));
-        if (u.kind == URL_EVENT)
+        if (u.kind == URL_EVENT || u.kind == URL_VENUE)
             cyberLine(14, y += 12, "NFC mark", u.fixed == c.uri ? "?m=nfc ok" : "missing ?m=nfc",
                       u.fixed == c.uri ? cyberHue(120) : cyberHue(30));
         if (!u.ok) cyberLine(14, y += 12, "Problem", u.problem, cyberHue(30));
