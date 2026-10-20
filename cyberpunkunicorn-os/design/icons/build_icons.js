@@ -248,6 +248,16 @@ function buildIcons() {
     T.outline(['H', 'h']);
     T.p(29, 2, 'S'); T.p(1, 22, 'S');
   }, 'golden folder with rainbow file lines; the last one blinks');
+  make('library', 'Library', 'col', T => {
+    T.rect(2, 20, 29, 21, 'w'); T.hl(2, 29, 22, 'K');
+    T.rect(4, 6, 7, 19, 'R'); T.rect(9, 3, 12, 19, 'R'); T.rect(14, 8, 16, 19, 'R');
+    T.hl(4, 7, 9, 'W'); T.hl(9, 12, 6, 'W'); T.hl(14, 16, 11, 'W');
+    for (let i = 0; i < 12; i++) T.rect(19 + Math.floor(i / 3), 19 - i, 21 + Math.floor(i / 3), 19 - i, 'H');
+    T.p(20, 17, 'h'); T.p(23, 9, 'h');
+    T.rect(25, 10, 27, 19, 'A');
+    T.outline(['R', 'H', 'h', 'w', 'A']);
+    T.p(29, 3, 'S'); T.p(1, 2, 'S');
+  }, 'shelf of rainbow book spines, a golden book leaning, the last spine blinks');
   make('wifi', 'WiFi Tools', 'row', T => {
     T.rect(15, 19, 17, 21, 'W'); T.outline(['W']);
     T.ring(16, 20, 4, 5, 'R', -140, -40); T.ring(16, 20, 8, 9, 'R', -140, -40);
