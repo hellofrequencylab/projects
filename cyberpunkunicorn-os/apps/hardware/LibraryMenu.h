@@ -23,10 +23,10 @@ private:
     void rescanNow();
 };
 
-// Main menu filter (patch 0015): false = the app waits in the Library.
+// Main menu filter (patch 0016): false = the app waits in the Library.
 bool cyberAppActive(const String &menuName);
 
-// Called by the main menu (patch 0015) before opening an app. For apps that need a
+// Called by the main menu (patch 0016) before opening an app. For apps that need a
 // hat module, re-probes and, if the right module isn't on, shows the DIP switch
 // card. Returns false if the user backed out.
 bool cyberHardwareGate(MenuItemInterface *item);
