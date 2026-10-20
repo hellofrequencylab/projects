@@ -19,7 +19,7 @@ index 162127d..2cde63a 100644
  void boot_screen_anim() {
 +#ifdef CYBER_UNICORN_BOOT
 +    // cyberpunkunicorn OS boot scene (apps/boot); falls back to stock if RAM is short.
-+    if (unicornBootScene(7000)) {
++    if (unicornBootScene(10000)) {
 +        tft.fillScreen(bruceConfig.bgColor);
 +        return;
 +    }
