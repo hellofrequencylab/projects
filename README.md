@@ -11,6 +11,7 @@ self-contained project: its own toolchain, its own build command, its own
 | [`nm-rf-hat/`](nm-rf-hat/) | Custom Bruce firmware for CYD (ESP32-2432S028) + NM-RF-HAT | `cd nm-rf-hat && ./build.sh` |
 | [`cyberpunkunicorn-os/`](cyberpunkunicorn-os/) | CyberUnicorn 5000™: our own OS for CYD + NM-RF-HAT (Bruce-based, rainbow skin, custom apps, sensor hub) | `cd cyberpunkunicorn-os && ./build.sh` |
 | [`unicorn-os-circuitpython/`](unicorn-os-circuitpython/) | Unicorn OS: CircuitPython launcher for Feather ESP32-S3 TFT + 8x8 LED panel (archive; being ported to C++) | none; copy `launcher/` to CIRCUITPY |
+| [`sensor-node/`](sensor-node/) | ESP32 ESP-NOW sensor node (BME280/BMP280, SHT3x, battery) reporting to the CyberUnicorn 5000 Sensors hub | `cd sensor-node && ./build.sh` |
 
 ## Adding a project
 
