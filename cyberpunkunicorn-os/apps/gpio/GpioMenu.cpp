@@ -212,10 +212,12 @@ void GpioMenu::drawIcon(float scale) {
 static uint32_t pinsCallback(cmd *c) {
     for (const FreePin &p : PINS) {
         peripheral_bus_type_t t = perimanGetPinBusType(p.pin);
-        serialDevice->printf(
-            "GPIO%-2d  level %d  owner %-14s  %s%s\n", p.pin, gpio_get_level((gpio_num_t)p.pin),
+        char buf[128];
+        snprintf(
+            buf, sizeof(buf), "GPIO%-2d  level %d  owner %-14s  %s%s", p.pin, gpio_get_level((gpio_num_t)p.pin),
             perimanGetTypeName(t), p.where, p.hatShared ? " (DIP 1-5 OFF to use)" : ""
         );
+        serialDevice->println(String(buf));
     }
     return true;
 }
