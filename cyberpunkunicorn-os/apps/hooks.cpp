@@ -4,6 +4,8 @@
 #include "net/net.h"
 #include "remote/remote.h"
 #include "core/display.h"
+#include <Preferences.h>
+#include <globals.h>
 
 bool cyberAppsHandleLine(const String &line, bool &result) {
     if (remote::handleLine(line)) {
@@ -13,7 +15,23 @@ bool cyberAppsHandleLine(const String &line, bool &result) {
     return false;
 }
 
+// boot.conf NEVER_DIM=1: turn the screen dimmer off once per unit. Bruce keeps
+// dimmerSet in its saved config, so a compile-time default wouldn't reach a unit
+// that already has one; the NVS flag means a dim time picked later in Config stays.
+static void neverDimOnce() {
+#ifdef CU_NEVER_DIM
+    Preferences p;
+    if (!p.begin("cyberhw", false)) return;
+    if (!p.getBool("nodim", false)) {
+        bruceConfig.setDimmer(0); // 0 = never dim or sleep
+        p.putBool("nodim", true);
+    }
+    p.end();
+#endif
+}
+
 void cyberAppsBoot() {
+    neverDimOnce();
     hw::boot(); // first hat probe: sorts apps into the main menu or the Library
     remote::boot();
 }

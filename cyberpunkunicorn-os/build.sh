@@ -37,6 +37,13 @@ if [[ "${TRIM_ABSENT_HARDWARE:-0}" != 0 && "${TRIM_ABSENT_HARDWARE:-0}" != 1 ]];
 fi
 [[ "${TRIM_ABSENT_HARDWARE:-0}" == 1 ]] && extra_flags+=" -DCU_TRIM_ABSENT_HW"
 
+# NEVER_DIM: 0/1 -> -DCU_NEVER_DIM: turn the screen dimmer off once per unit at boot
+# (apps/hooks.cpp, NVS cyberhw/nodim), so a dim time picked later in Config stays.
+if [[ "${NEVER_DIM:-0}" != 0 && "${NEVER_DIM:-0}" != 1 ]]; then
+  echo "boot.conf: NEVER_DIM must be 0 or 1 (got '${NEVER_DIM:-}')" >&2; exit 1
+fi
+[[ "${NEVER_DIM:-0}" == 1 ]] && extra_flags+=" -DCU_NEVER_DIM"
+
 # STARTUP_APP: empty = normal menu; otherwise must be a known Bruce startup app.
 STARTUP_APP="${STARTUP_APP:-}"
 if [[ -n "$STARTUP_APP" ]]; then

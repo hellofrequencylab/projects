@@ -28,6 +28,7 @@ enum Part : uint8_t {
     HW_LORA,        // LoRa module
     HW_ETHERNET,    // W5500 Ethernet module
     HW_FM,          // Si4713 FM transmitter
+    HW_MIC,         // analog microphone on GPIO35 (Spectrum's audio source)
     HW_PART_COUNT
 };
 
