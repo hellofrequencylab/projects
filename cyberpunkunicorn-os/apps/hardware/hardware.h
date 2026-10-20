@@ -59,7 +59,7 @@ void ingestProbe(const HatProbeResult &r);
 
 // Probes the hat now (~0.4 s; drives pins 22/27). Returns false, without probing,
 // if something is using those pins (e.g. Light Show).
-bool rescan();
+bool rescan(bool allowSpi = true); // false: I2C only (see probeHat(bool))
 
 // --- apps --------------------------------------------------------------------
 

@@ -194,7 +194,9 @@ static HatProbeResult lastResult;
 static uint32_t lastAt = 0;
 static bool haveLast = false;
 
-HatProbeResult probeHat() {
+HatProbeResult probeHat() { return probeHat(true); }
+
+HatProbeResult probeHat(bool allowSpi) {
     HatProbeResult r;
     probeI2C(r);
     if (!r.pn532) {
@@ -207,8 +209,8 @@ HatProbeResult probeHat() {
     }
     // The SPI radios sit on the same two pins as I2C. If the PN532 answered,
     // driving those pins as SPI would fight it, so stop here.
-    if (!r.pn532) probeSPI(r);
-    if (r.liveCount() == 0) probeRxLine(r);
+    if (allowSpi && !r.pn532) probeSPI(r);
+    if (allowSpi && r.liveCount() == 0) probeRxLine(r);
     lastResult = r;
     lastAt = millis();
     haveLast = true;

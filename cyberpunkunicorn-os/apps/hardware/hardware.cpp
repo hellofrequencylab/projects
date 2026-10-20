@@ -146,9 +146,9 @@ void ingestProbe(const HatProbeResult &r) {
     pendingMask |= live;
 }
 
-bool rescan() {
+bool rescan(bool allowSpi) {
     if (lightshowRunning()) return false;
-    probeHat(); // calls ingestProbe()
+    probeHat(allowSpi); // calls ingestProbe()
     flush();
     return true;
 }
@@ -185,13 +185,15 @@ bool appReadyNow(const String &menuName) {
 
 void boot() {
     load();
-    // Right after power-up the hat module can still be waking (a PN532 on DIP 3 was
-    // missed at boot but found by a later probe), so give it two more chances.
-    // Costs about 0.8 s at boot only when no hat module answers.
-    const uint32_t hatParts = (1u << HW_PN532) | (1u << HW_CC1101) | (1u << HW_NRF24);
+    // Right after power-up a PN532 on DIP 3 can still be waking (the boot probe
+    // missed one a later probe found). The first two tries scan I2C only, 400 ms
+    // apart: driving 22/27 as SPI under a half-awake PN532 can wedge it. Only the
+    // last try looks for the SPI radios. About 0.8 s extra at boot unless a PN532
+    // answers early.
     for (int attempt = 0; attempt < 3; attempt++) {
         if (attempt) delay(400);
-        if (!rescan() || (liveMask & hatParts)) break;
+        bool last = attempt == 2;
+        if (!rescan(last) || last || liveNow(HW_PN532)) break;
     }
 }
 
