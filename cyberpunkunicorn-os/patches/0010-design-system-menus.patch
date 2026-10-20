@@ -1,0 +1,141 @@
+diff --git a/src/core/display.cpp b/src/core/display.cpp
+index 4eb440e..64e9bc4 100644
+--- a/src/core/display.cpp
++++ b/src/core/display.cpp
+@@ -1,5 +1,6 @@
+ #include "display.h"
+ #include "cyber_apps/ui/rainbow.h" // CyberUnicorn 5000 skin (patch 0008)
++#include "cyber_apps/ui/cyber_icon.h" // pixel icons + option list (patch 0010)
+ #include "core/wifi/webInterface.h" // for server
+ #include "core/wifi/wg.h"           //for isConnectedWireguard to print wireguard lock
+ #include "mykeyboard.h"
+@@ -569,6 +570,7 @@ int loopOptions(
+     while (1) {
+         // Check for shutdown before drawing menu to avoid drawing a black bar on the screen
+         if (exit) break;
++        cyberIconIdle(); // animates the icon on screen, every 40 ms
+         if (menuType == MENU_TYPE_MAIN) {
+             checkReboot();
+             if (devModeCounter >= 5 && !bruceConfig.devMode) {
+@@ -869,61 +871,7 @@ Opt_Coord drawOptions(
+ ** Description:   Função para desenhar e mostrar as opçoes de contexto
+ ***************************************************************************************/
+ void drawSubmenu(int index, std::vector<Option> &options, const char *title) {
+-    drawStatusBar();
+-    int menuSize = options.size();
+-    tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
+-    tft.setTextSize(FP);
+-    tft.drawPixel(0, 0, 0);
+-    tft.fillRect(6, 30, tftWidth - 12, 8 * FP, bruceConfig.bgColor);
+-    tft.drawString(title, 12, 30);
+-
+-    // middle of the drawing area
+-    int middle = 25 /*status*/ + (tftHeight - 30 /*status + bottom margin*/) / 2;
+-    // drawCentreString uses TC_DATUM, so we need to adjust the Y position
+-    // 42 ensures that title isnt touched( 30 + 8 (LH) + 4(Margin))
+-    int middle_up = middle - (tftHeight - 42) / 3 - FM * LH / 2 + 4;
+-    int middle_down = middle + (tftHeight - 42) / 3 - FM * LH / 2;
+-
+-    tft.setTextSize(FM);
+-#if defined(HAS_TOUCH)
+-    tft.drawCentreString("/\\", tftWidth / 2, middle_up - (FM * LH + 6), 1);
+-#endif
+-    // Previous item
+-    int firstIndex = index - 1 >= 0 ? index - 1 : menuSize - 1;
+-    const char *firstOption = options[firstIndex].label.c_str();
+-    tft.setTextColor(options[firstIndex].enabled ? bruceConfig.secColor : TFT_DARKGREY);
+-    tft.fillRect(6, middle_up, tftWidth - 12, 8 * FM, bruceConfig.bgColor);
+-    tft.drawCentreString(firstOption, tftWidth / 2, middle_up, SMOOTH_FONT);
+-
+-    // Selected item
+-    int selectedTextSize = options[index].label.length() <= tftWidth / (LW * FG) - 1 ? FG : FM;
+-    tft.setTextSize(selectedTextSize);
+-    tft.setTextColor(options[index].enabled ? cyberItemColor(index, menuSize) : TFT_DARKGREY);
+-    tft.fillRect(6, middle - FG * LH / 2 - 1, tftWidth - 12, FG * LH + 5, bruceConfig.bgColor);
+-    tft.drawCentreString(options[index].label, tftWidth / 2, middle - selectedTextSize * LH / 2, SMOOTH_FONT);
+-    cyberRainbowHLine(
+-        tftWidth / 2 - strlen(options[index].label.c_str()) * selectedTextSize * LW / 2,
+-        middle + selectedTextSize * LH / 2 + 1,
+-        strlen(options[index].label.c_str()) * selectedTextSize * LW,
+-        cyberPhase()
+-    );
+-    // Next Item
+-    int thirdIndex = index + 1 < menuSize ? index + 1 : 0;
+-    const char *thirdOption = options[thirdIndex].label.c_str();
+-    tft.setTextSize(FM);
+-    tft.setTextColor(options[thirdIndex].enabled ? bruceConfig.secColor : TFT_DARKGREY);
+-    tft.fillRect(6, middle_down, tftWidth - 12, 8 * FM, bruceConfig.bgColor);
+-    tft.drawCentreString(thirdOption, tftWidth / 2, middle_down, SMOOTH_FONT);
+-
+-    tft.fillRect(tftWidth - 5, 0, 5, tftHeight, bruceConfig.bgColor);
+-    tft.fillRect(tftWidth - 5, index * tftHeight / menuSize, 5, tftHeight / menuSize, cyberItemColor(index, menuSize));
+-
+-#if defined(HAS_TOUCH)
+-    tft.drawCentreString("\\/", tftWidth / 2, middle_down + (FM * LH + 6), 1);
+-    tft.setTextColor(getColorVariation(bruceConfig.priColor), bruceConfig.bgColor);
+-    tft.drawString("[ x ]", 7, 7, 1);
+-    TouchFooter();
+-#endif
++    cyberOptionList(index, options, title); // CyberUnicorn 5000 list (patch 0010)
+ }
+ 
+ void drawStatusBar() {
+@@ -935,22 +883,19 @@ void drawStatusBar() {
+         cyberRainbowHLine(5, 25, tftWidth - 10, cyberPhase() + 180);
+     }
+ 
++    // CyberUnicorn 5000 design system: "CU5K <version>" left, clock right.
++    setTftDisplay(12, 12, bruceConfig.priColor, 1, bruceConfig.bgColor);
++    int nameW = cyberRainbowText("CU5K", 12, 12, cyberPhase(), bruceConfig.bgColor);
++    tft.setTextColor(TFT_DARKGREY, bruceConfig.bgColor);
++    tft.drawString(OS_VERSION, 12 + nameW + 6, 12, 1);
+     if (clock_set) {
+-        setTftDisplay(12, 12, bruceConfig.priColor, 1, bruceConfig.bgColor);
+-        tft.fillRect(12, 12, 60, LH, bruceConfig.bgColor);
+ #if defined(HAS_RTC)
+         updateTimeStr(_rtc.getTimeStruct());
+ #else
+         updateTimeStr(rtc.getTimeStruct());
+ #endif
+-        tft.print(timeStr);
+-    } else {
+-        setTftDisplay(12, 12, bruceConfig.priColor, 1, bruceConfig.bgColor);
+-        int nameW = cyberRainbowText(OS_NAME, 12, 12, cyberPhase(), bruceConfig.bgColor);
+         tft.setTextColor(TFT_WHITE, bruceConfig.bgColor);
+-        tft.drawString("TM", 12 + nameW + 1, 9, 1);
+-        tft.setTextColor(TFT_DARKGREY, bruceConfig.bgColor);
+-        tft.drawString(OS_VERSION, 12 + nameW + 16, 12, 1);
++        tft.drawRightString(timeStr, tftWidth - 12, 12, 1);
+     }
+ 
+     int iconCount = 0;
+@@ -1016,6 +961,7 @@ void drawStatusBar() {
+ }
+ 
+ void drawMainBorder(bool clear) {
++    cyberIconForget();
+     if (clear) {
+         tft.drawPixel(0, 0, 0);
+         tft.fillScreen(bruceConfig.bgColor);
+diff --git a/src/core/main_menu.cpp b/src/core/main_menu.cpp
+index 0f6b5cb..edb1592 100644
+--- a/src/core/main_menu.cpp
++++ b/src/core/main_menu.cpp
+@@ -1,6 +1,7 @@
+ #include "main_menu.h"
+ #include "display.h"
+ #include "utils.h"
++#include "cyber_apps/ui/cyber_icon.h"
+ #include "cyber_apps/ui/rainbow.h"
+ #include <globals.h>
+ 
+@@ -62,7 +63,8 @@ void MainMenu::begin(void) {
+                          if (items[k] == obj) bruceConfig.priColor = cyberItemColor(k, items.size());
+                      float scale = float((float)tftWidth / (float)240);
+                      if (bruceConfigPins.rotation & 0b01) scale = float((float)tftHeight / (float)135);
+-                     obj->draw(scale);
++                     // Pixel-art icon page when the item has one (patch 0010).
++                     if (!cyberMainMenuItem(obj, obj->getName())) obj->draw(scale);
+                      bruceConfig.priColor = savedColor;
+ #if defined(HAS_TOUCH)
+                      TouchFooter();

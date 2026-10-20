@@ -1,5 +1,7 @@
 #include "HatMenu.h"
 
+#include "../ui/cyber_icon.h"
+
 #include "core/display.h"
 #include "core/scrollableTextArea.h"
 #include "core/utils.h"
@@ -43,20 +45,9 @@ void HatMenu::showDipGuide() {
 }
 
 void HatMenu::drawIcon(float scale) {
+    // Pixel-art icon from design/icons (apps/ui/cyber_icons.h).
     clearIconArea();
-    // A board with a 6-way DIP switch.
-    int w = scale * 70, h = scale * 40;
-    int x = iconCenterX - w / 2, y = iconCenterY - h / 2;
-    tft.drawRoundRect(x, y, w, h, scale * 4, bruceConfig.priColor);
-    int sw = w / 8, sh = h / 2, gap = (w - 6 * sw) / 7;
-    for (int i = 0; i < 6; i++) {
-        int sx = x + gap + i * (sw + gap);
-        int sy = y + (h - sh) / 2;
-        tft.drawRect(sx, sy, sw, sh, bruceConfig.priColor);
-        // Switch 1 drawn ON (knob up), the rest OFF.
-        int ky = (i == 0) ? sy + 1 : sy + sh / 2;
-        tft.fillRect(sx + 1, ky, sw - 2, sh / 2 - 1, bruceConfig.priColor);
-    }
+    cyberIcon(getName().c_str(), iconCenterX, iconCenterY, max(2, (int)(scale * 2.4f + 0.5f)), true);
 }
 
 static uint32_t hatCallback(cmd *c) {

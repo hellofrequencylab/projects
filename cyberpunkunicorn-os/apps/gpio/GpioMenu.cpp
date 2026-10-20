@@ -1,5 +1,7 @@
 #include "GpioMenu.h"
 
+#include "../ui/cyber_icon.h"
+
 #include "../hat/hat_probe.h"
 #include "../ui/rainbow.h"
 #include "core/display.h"
@@ -194,19 +196,9 @@ void GpioMenu::optionsMenu() {
 }
 
 void GpioMenu::drawIcon(float scale) {
+    // Pixel-art icon from design/icons (apps/ui/cyber_icons.h).
     clearIconArea();
-    // A chip with rainbow legs.
-    int w = scale * 34, h = scale * 44;
-    int x = iconCenterX - w / 2, y = iconCenterY - h / 2;
-    tft.fillRoundRect(x, y, w, h, scale * 3, 0x2104);
-    tft.drawRoundRect(x, y, w, h, scale * 3, bruceConfig.priColor);
-    tft.fillCircle(x + scale * 7, y + scale * 7, max(2, (int)(scale * 3)), bruceConfig.priColor);
-    int legs = 5, leg = scale * 9, th = max(2, (int)(scale * 3));
-    for (int i = 0; i < legs; i++) {
-        int ly = y + scale * 5 + i * (h - scale * 10) / (legs - 1) - th / 2;
-        tft.fillRect(x - leg, ly, leg, th, cyberHue(i * 36));
-        tft.fillRect(x + w, ly, leg, th, cyberHue(180 + i * 36));
-    }
+    cyberIcon(getName().c_str(), iconCenterX, iconCenterY, max(2, (int)(scale * 2.4f + 0.5f)), true);
 }
 
 static uint32_t pinsCallback(cmd *c) {

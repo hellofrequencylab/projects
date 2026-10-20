@@ -1,5 +1,7 @@
 #include "WeatherMenu.h"
 
+#include "../ui/cyber_icon.h"
+
 #include "../ui/rainbow.h"
 #include "core/display.h"
 #include "core/mykeyboard.h"
@@ -336,11 +338,7 @@ void WeatherMenu::run() {
 }
 
 void WeatherMenu::drawIcon(float scale) {
+    // Pixel-art icon from design/icons (apps/ui/cyber_icons.h).
     clearIconArea();
-    // The pixel-art "partly cloudy" icon, with rainbow rain.
-    int s = max(1, (int)(scale * 5));
-    int x = iconCenterX - 6 * s, y = iconCenterY - 7 * s;
-    drawCondition(2, true, x, y, s);
-    for (int i = 0; i < 4; i++)
-        tft.fillRect(x + (2 + i * 3) * s, y + (11 + (i % 2)) * s, s, s * 2, cyberHue(i * 70));
+    cyberIcon(getName().c_str(), iconCenterX, iconCenterY, max(2, (int)(scale * 2.4f + 0.5f)), true);
 }
