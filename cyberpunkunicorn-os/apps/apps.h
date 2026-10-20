@@ -7,17 +7,20 @@
 #include "hat/HatMenu.h"
 #include "lightshow/LightShowMenu.h"
 #include "led/LedMenu.h"
+#include "light/LightMenu.h"
 
 // Members of MainMenu (one instance per app).
 #define CYBER_APP_MEMBERS                                                                         \
     HatMenu hatMenu;                                                                              \
     LightShowMenu lightShowMenu;                                                                  \
-    LedMenu ledMenu;
+    LedMenu ledMenu;                                                                              \
+    LightMenu lightMenu;
 
 // Pointers listed first in the main menu, in this order.
-#define CYBER_APP_MENU_ITEMS &lightShowMenu, &hatMenu, &ledMenu,
+#define CYBER_APP_MENU_ITEMS &lightShowMenu, &hatMenu, &ledMenu, &lightMenu,
 
 inline void cyberAppsCreateCommands(SimpleCLI *cli) {
     createHatCommand(cli);
     createLedCommand(cli);
+    createLightCommand(cli);
 }
