@@ -1,5 +1,6 @@
 #include "weather.h"
 
+#include "../net/net.h"
 #include <ArduinoJson.h>
 #include <HTTPClient.h>
 #include <Preferences.h>
@@ -117,7 +118,9 @@ bool fetchWeather(Data &out) {
         d.city = s.city;
     } else if (!locate(d, error)) {
         out.ok = false;
-        out.error = "Location: " + error;
+        String detail; // a guest network's sign-in page fails every lookup the same way
+        net::Internet i = net::checkInternet(detail);
+        out.error = i == net::NET_ONLINE ? "Location: " + error : net::internetText(i);
         return false;
     }
     if (d.city.isEmpty() || d.city == "null")

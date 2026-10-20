@@ -123,6 +123,14 @@ int retryQueue(String &err) {
     int answered = 0;
     for (const QueuedScan &s : q) {
         ScanReply r = postScan(s.token, s.uid, true, s.ts);
+        // A 401 (scanner not paired / wrong secret) or 429 (slow down) says nothing
+        // about the scan itself: keep it and the rest for the next try.
+        bool retryLater = r.reason == "device_unauthorized" || r.reason == "rate_limited" ||
+                          r.reason == "HTTP 401" || r.reason == "HTTP 429";
+        if (r.status == API_REJECTED && retryLater) {
+            err = r.reason;
+            break;
+        }
         if (r.status == API_OK || r.status == API_REJECTED) {
             done.push_back(s); // the server decided; don't send it twice
             answered++;

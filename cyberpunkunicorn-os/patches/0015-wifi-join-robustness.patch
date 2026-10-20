@@ -1,0 +1,198 @@
+diff --git a/src/core/config.cpp b/src/core/config.cpp
+index ab13388..41fddf0 100644
+--- a/src/core/config.cpp
++++ b/src/core/config.cpp
+@@ -666,6 +666,12 @@ String BruceConfig::getWifiPassword(const String &ssid) const {
+     return "";
+ }
+ 
++bool BruceConfig::hasWifiCredential(const String &ssid) const { return wifi.find(ssid) != wifi.end(); }
++
++void BruceConfig::removeWifiCredential(const String &ssid) {
++    if (wifi.erase(ssid)) saveFile();
++}
++
+ void BruceConfig::addEvilWifiName(String value) {
+     evilWifiNames.insert(value);
+     saveFile();
+diff --git a/src/core/config.h b/src/core/config.h
+index 2a1ecf0..17677dc 100644
+--- a/src/core/config.h
++++ b/src/core/config.h
+@@ -172,6 +172,9 @@ public:
+     void addQrCodeEntry(const String &menuName, const String &content);
+     void removeQrCodeEntry(const String &menuName);
+     String getWifiPassword(const String &ssid) const;
++    // CyberUnicorn: an open network is saved with an empty password, so "known" can't be pwd != ""
++    bool hasWifiCredential(const String &ssid) const;
++    void removeWifiCredential(const String &ssid);
+     void addEvilWifiName(String value);
+     void removeEvilWifiName(String value);
+     void setEvilEndpointCreds(String value);
+diff --git a/src/core/serial_commands/wifi_commands.cpp b/src/core/serial_commands/wifi_commands.cpp
+index 95c54ce..2cb47fa 100644
+--- a/src/core/serial_commands/wifi_commands.cpp
++++ b/src/core/serial_commands/wifi_commands.cpp
+@@ -21,8 +21,7 @@ uint32_t wifiCallback(cmd *c) {
+     ssid.trim();
+ 
+     Argument pwdArg = cmd.getArgument("pwd");
+-    String pwd = pwdArg.getValue();
+-    pwd.trim();
++    String pwd = pwdArg.getValue(); // CyberUnicorn: not trimmed, a quoted password may end in a space
+ 
+     if (status == "off") {
+         wifiDisconnect();
+@@ -36,8 +35,17 @@ uint32_t wifiCallback(cmd *c) {
+         wifiDisconnect();
+         return _setupAP();
+ 
+-    } else if (status == "add" && ssid != "" && pwd != "") {
++    } else if (status == "add" && ssid != "") { // CyberUnicorn: no password = open network
+         bruceConfig.addWifiCredential(ssid, pwd);
++        serialDevice->println("Saved \"" + ssid + "\"" + (pwd == "" ? " (open network)" : ""));
++        return true;
++    } else if (status == "forget" && ssid != "") {
++        if (!bruceConfig.hasWifiCredential(ssid)) {
++            serialDevice->println("Not saved: \"" + ssid + "\"");
++            return false;
++        }
++        bruceConfig.removeWifiCredential(ssid);
++        serialDevice->println("Forgot \"" + ssid + "\"");
+         return true;
+     } else {
+         serialDevice->println(
+@@ -46,7 +54,9 @@ uint32_t wifiCallback(cmd *c) {
+             "Possible commands: \n"
+             "-> wifi off (Disconnects Wifi)\n"
+             "-> wifi on  (Connects to a known Wifi network. if there's no known network, starts in AP Mode)\n"
+-            "-> wifi add SSID Password (adds a network to the list)"
++            "-> wifi add SSID [Password] (adds a network to the list; no password = open)\n"
++            "-> wifi forget SSID (removes it)\n"
++            "   Quote names with spaces: wifi add \"Cafe Guest\" \"pass\""
+         );
+         return false;
+     }
+diff --git a/src/core/wifi/wifi_common.cpp b/src/core/wifi/wifi_common.cpp
+index 65c921c..9331f6b 100644
+--- a/src/core/wifi/wifi_common.cpp
++++ b/src/core/wifi/wifi_common.cpp
+@@ -9,6 +9,7 @@
+ #include "core/wifi/wifi_mac.h"
+ #include "esp_wifi.h"
+ #include "modules/ble/ble_common.h"
++#include "cyber_apps/hooks.h"
+ #include <esp_event.h>
+ #include <esp_netif.h>
+ #include <globals.h>
+@@ -16,6 +17,35 @@
+ static TaskHandle_t timezoneTaskHandle = NULL;
+ static bool wifiTransitioning = false;
+ 
++// CyberUnicorn: on this no-PSRAM board the Bluetooth remote (BLE API) holds the DMA
++// block Wi-Fi needs. Turn it off rather than refusing Wi-Fi; the Remote app shows it off.
++static bool makeRoomForWifi() {
++    if (radioHasMemForWifi()) return true;
++#if !defined(LITE_VERSION)
++    if (isBLEAPIEnabled()) {
++        Serial.println("[WiFi] Low DMA memory: turning the Bluetooth remote off for Wi-Fi");
++        enableBLEAPI(); // toggles it off
++        vTaskDelay(300 / portTICK_PERIOD_MS);
++    }
++#endif
++    if (!radioHasMemForWifi()) {
++        stopBLEStack();
++        vTaskDelay(300 / portTICK_PERIOD_MS);
++    }
++    return radioHasMemForWifi();
++}
++
++// CyberUnicorn: why a join failed, in words, instead of a bare "Wifi Offline".
++static String wifiFailReason() {
++    switch (WiFi.status()) {
++        case WL_NO_SSID_AVAIL: return "Network not found";
++        case WL_CONNECT_FAILED: return "Wrong password?";
++        case WL_CONNECTION_LOST: return "Connection lost";
++        case WL_DISCONNECTED: return "No answer (password or DHCP)";
++        default: return "Wifi Offline";
++    }
++}
++
+ esp_err_t wifiRawTx(wifi_interface_t ifx, const void *frame, int len, uint8_t retries) {
+     esp_err_t err = esp_wifi_80211_tx(ifx, frame, len, false);
+     for (uint8_t i = 0; err == ESP_ERR_NO_MEM && i < retries; i++) {
+@@ -84,6 +114,7 @@ bool _wifiConnect(const String &ssid, int encryption) {
+         wifiConnected = true;
+         wifiIP = WiFi.localIP().toString();
+         bruceConfig.addWifiCredential(ssid, password);
++        cyberAppsWifiJoined(); // CyberUnicorn: warn if it's a sign-in-page network
+ 
+         // Start timezone update in background if not already running
+         if (timezoneTaskHandle == NULL) {
+@@ -126,8 +157,8 @@ bool _connectToWifiNetwork(const String &ssid, const String &pwd) {
+         Serial.print(".");
+ #endif
+ 
+-        if (i > 20) {
+-            displayError("Wifi Offline");
++        if (i > 40) { // CyberUnicorn: 20 s, busy guest networks are slow to hand out an IP
++            displayError(wifiFailReason());
+             vTaskDelay(500 / portTICK_RATE_MS);
+             break;
+         }
+@@ -193,7 +224,7 @@ bool wifiConnectMenu(wifi_mode_t mode) {
+ 
+         case WIFI_STA: { // station mode
+             int nets;
+-            if (!radioHasMemForWifi()) {
++            if (!makeRoomForWifi()) {
+                 displayError("Low RAM: free BLE/SD first", true);
+                 return false;
+             }
+@@ -299,6 +330,7 @@ void wifiConnectTask(void *pvParameters) {
+     // No-PSRAM guard: don't bring Wi-Fi up if the contiguous DMA block is too
+     // small (e.g. BLE already active) — the scan would half-init the driver and
+     // crash on teardown. Silent bail: this is a background auto-connect task.
++    // (CyberUnicorn: it races the Bluetooth-at-boot start, so it never turns BLE off.)
+     if (!radioHasMemForWifi()) {
+         vTaskDelete(NULL);
+         return;
+@@ -309,13 +341,15 @@ void wifiConnectTask(void *pvParameters) {
+     String ssid;
+     String pwd;
+ 
+-    for (int i = 0; i < nets; i++) {
++    // CyberUnicorn: stop at the first network that connects (upstream kept calling
++    // WiFi.begin on the next known SSID, dropping the one it had), and open networks count.
++    for (int i = 0; i < nets && !WiFi.isConnected(); i++) {
+         ssid = WiFi.SSID(i);
++        if (!bruceConfig.hasWifiCredential(ssid)) continue;
+         pwd = bruceConfig.getWifiPassword(ssid);
+-        if (pwd == "") continue;
+ 
+         WiFi.begin(ssid, pwd);
+-        for (int i = 0; i < 50; i++) {
++        for (int j = 0; j < 200; j++) { // 20 s
+             if (WiFi.isConnected()) {
+                 wifiConnected = true;
+                 wifiIP = WiFi.localIP().toString();
+@@ -354,8 +388,8 @@ bool wifiConnecttoKnownNet(void) {
+     }
+ 
+     // No-PSRAM guard: refuse before the scan brings Wi-Fi up in low memory.
+-    if (!radioHasMemForWifi()) {
+-        displayError("Low RAM: free BLE/SD first", true);
++    if (!makeRoomForWifi()) {
++        displayError("Low RAM: free BLE/SD first"); // CyberUnicorn: don't block on a tap here
+         return false;
+     }
+ 
+@@ -370,7 +404,7 @@ bool wifiConnecttoKnownNet(void) {
+         vTaskDelay(10 / portTICK_PERIOD_MS);
+         String ssid = WiFi.SSID(i);
+         String password = bruceConfig.getWifiPassword(ssid);
+-        if (password != "") {
++        if (bruceConfig.hasWifiCredential(ssid)) { // CyberUnicorn: open networks too
+             Serial.println("Connecting to: " + ssid);
+             result = _connectToWifiNetwork(ssid, password);
+         }

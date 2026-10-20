@@ -10,3 +10,6 @@ bool cyberAppsHandleLine(const String &line, bool &result);
 
 // End of setup(), just before the CLI task starts reading.
 void cyberAppsBoot();
+
+// Patch 0015: Bruce's Wi-Fi menu just joined a network (UI task, may draw).
+void cyberAppsWifiJoined();
