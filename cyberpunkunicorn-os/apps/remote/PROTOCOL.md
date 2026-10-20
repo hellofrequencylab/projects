@@ -206,7 +206,8 @@ probe at some point; sticky, so flipping the DIP switch doesn't reshuffle the me
 `marked` (the user said they have it; the only way for parts with `"auto":false`) or
 `live` (answered the latest probe). `apps` lists only apps with a hardware rule;
 `active:false` means it is in the Library. Part ids: `pn532 cc1101 nrf24 ir ook433 i2c
-node speaker ledpanel gps lora ethernet fm`.
+node speaker ledpanel gps lora ethernet fm mic`.
+Frequency is pinned: always `active:true`; opening it with no PN532 live shows the DIP card.
 
 ### `hardware.rescan` *
 
@@ -217,6 +218,32 @@ No args → same reply as `hardware.list`, after a fresh hat probe (~0.4 s, driv
 
 `{"part":"speaker","have":true}` → same reply as `hardware.list`. `have:false` forgets
 the part (clears both detected and marked).
+
+### `spectrum.bands` *
+
+`{"bands":[{"id":"wifi","label":"Wi-Fi channels"},{"id":"2g4",...},{"id":"315",...},
+{"id":"433",...},{"id":"868",...},{"id":"915",...},{"id":"subghz_mid",...},
+{"id":"subghz_high",...},{"id":"audio",...}]}`
+
+### `spectrum.read` *
+
+The latest sweep of the Spectrum screen. `not_open` unless it is open on the device
+(the radios belong to the screen; the remote only listens).
+
+```json
+{"band":"433","label":"433 MHz (remotes, EU)","start":425,"step":0.317,"freq_unit":"MHz",
+ "value_unit":"dBm","levels":[0,3,...],"values":[-108,-104,...],
+ "peak_freq":433.88,"peak_value":-52}
+```
+
+`levels` are 0–100 (what the screen draws), `values` are per bin in `value_unit`: dBm
+(Wi-Fi strongest network, CC1101 RSSI), `%` (nRF24 activity), `dB` (audio, relative to
+the loudest bin). Wi-Fi adds `networks`. Bin *i* is at `start + i*step`.
+
+### `spectrum.stream` *
+
+`{"on":true}` → `{"streaming":true,"open":false}`. While on and the screen is open, a
+`spectrum` event (same data as `spectrum.read`) goes out at most every 250 ms.
 
 ### `lightshow.state` *
 
@@ -237,9 +264,8 @@ as `lightshow.state`, plus `"starting":true` when it asked the UI to open the sh
   exactly like the buttons. `running:false` stops the show and returns to the menu.
 - While stopped, scene and level are saved for the next start. `running:true` opens
   Light Show on the device's UI. This works **only from the main menu**: otherwise
-  `busy` (send `screen.nav esc` a few times to get back to the main menu, then retry). The show
-  may still refuse to start if a hat module is powered on its data pin. It then
-  emits `lightshow.error` and shows a warning on screen.
+  `busy` (send `screen.nav esc` a few times to get back to the main menu, then retry). If a hat module
+  is powered on its data pin, the show plays on screen only (the pin isn't driven).
 - Scene names match case-insensitively. Level steps are 4/8/15/25/40 % brightness.
 
 ### Wi-Fi (`apps/net/`)
@@ -286,8 +312,9 @@ this table when it registers its handler.
 | event | data | when |
 |---|---|---|
 | `lightshow.state` | same as `lightshow.state` | show starts, stops, or changes scene/level (buttons or remote) |
-| `lightshow.error` | `{message}` | the show refused to start |
+| `lightshow.error` | `{message}` | reserved; not sent since Light Show plays on screen only when the hat owns its pin |
 | `wifi.joining` | `{}` | `wifi.join` started (it can take up to 30 s) |
+| `spectrum` | same as `spectrum.read` | each sweep (max 4/s) while streaming and the Spectrum screen is open |
 
 Events go to USB always, and to BLE when a phone is connected.
 
