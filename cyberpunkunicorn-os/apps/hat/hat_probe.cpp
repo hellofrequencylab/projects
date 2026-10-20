@@ -1,0 +1,192 @@
+#include "hat_probe.h"
+
+#include "core/bus_HAL.h"
+#include <SPI.h>
+#include <globals.h>
+
+namespace {
+
+constexpr uint8_t PN532_I2C_ADDR = 0x24;
+
+// CC1101 status registers are read with the burst bit set (0xC0 | addr).
+constexpr uint8_t CC1101_READ_PARTNUM = 0xF0;
+constexpr uint8_t CC1101_READ_VERSION = 0xF1;
+
+// nRF24 R_REGISTER is 0x00 | addr; SETUP_AW (0x03) resets to 0x03.
+constexpr uint8_t NRF24_READ_SETUP_AW = 0x03;
+
+const SPISettings PROBE_SPI(1000000, MSBFIRST, SPI_MODE0);
+
+bool isKnownCcVersion(uint8_t v) {
+    // Known CC1101 VERSION values across silicon revisions and clones.
+    return v == 0x04 || v == 0x07 || v == 0x08 || v == 0x14 || v == 0x17 || v == 0x18;
+}
+
+void probeI2C(HatProbeResult &r) {
+    TwoWire *wire = acquireI2CBus();
+    for (uint8_t addr = 0x08; addr < 0x78; addr++) {
+        wire->beginTransmission(addr);
+        if (wire->endTransmission() != 0) continue;
+        if (addr == PN532_I2C_ADDR) r.pn532 = true;
+        else r.i2cOther.push_back(addr);
+    }
+    releaseI2CBus();
+}
+
+// Raw two-byte exchange with CS held low. Returns {first, second} response bytes.
+void spiExchange(SPIClass *spi, gpio_num_t cs, uint8_t cmd, uint8_t &first, uint8_t &second) {
+    digitalWrite(cs, LOW);
+    delayMicroseconds(50); // CC1101 pulls MISO low when its crystal is ready
+    spi->beginTransaction(PROBE_SPI);
+    first = spi->transfer(cmd);
+    second = spi->transfer(0x00);
+    spi->endTransaction();
+    digitalWrite(cs, HIGH);
+    delayMicroseconds(20);
+}
+
+void probeSPI(HatProbeResult &r) {
+    const auto &cc = bruceConfigPins.CC1101_bus;
+    const auto &nrf = bruceConfigPins.NRF24_bus;
+
+    // Shared lines: keep both chip selects idle and hold the nRF24 CE / CC1101
+    // GDO0 / IR+433 TX line LOW so nothing transmits while we poke the bus.
+    pinMode(cc.cs, OUTPUT);
+    digitalWrite(cc.cs, HIGH);
+    if (nrf.cs != cc.cs) {
+        pinMode(nrf.cs, OUTPUT);
+        digitalWrite(nrf.cs, HIGH);
+    }
+    if (nrf.io0 != GPIO_NUM_NC) {
+        pinMode(nrf.io0, OUTPUT);
+        digitalWrite(nrf.io0, LOW);
+    }
+    // Keep the SD card deselected; it shares SCK/MISO/MOSI.
+    if (bruceConfigPins.SDCARD_bus.cs != GPIO_NUM_NC) {
+        pinMode(bruceConfigPins.SDCARD_bus.cs, OUTPUT);
+        digitalWrite(bruceConfigPins.SDCARD_bus.cs, HIGH);
+    }
+    delay(2);
+
+    SPIClass *spi = acquireSPIBus(cc.sck, cc.miso, cc.mosi);
+    if (!spi) {
+        spi = &SPI;
+        spi->begin(cc.sck, cc.miso, cc.mosi, -1);
+    }
+
+    // CC1101 first: its PARTNUM/VERSION reads are read-only. On an nRF24 these
+    // command bytes are undefined and just return STATUS, so they can't match.
+    uint8_t dummy;
+    spiExchange(spi, cc.cs, CC1101_READ_PARTNUM, dummy, r.ccPartnum);
+    spiExchange(spi, cc.cs, CC1101_READ_VERSION, dummy, r.ccVersion);
+    r.cc1101 = (r.ccPartnum == 0x00) && isKnownCcVersion(r.ccVersion);
+
+    // Only probe the nRF24 if no CC1101 answered: 0x03 is a register *write*
+    // on a CC1101 (FIFOTHR), and we never write to a chip we didn't mean to.
+    if (!r.cc1101) {
+        spiExchange(spi, nrf.cs, NRF24_READ_SETUP_AW, r.nrfStatus, r.nrfSetupAw);
+        r.nrf24 = (r.nrfStatus != 0x00) && ((r.nrfStatus & 0x80) == 0) && r.nrfSetupAw >= 1 &&
+                  r.nrfSetupAw <= 3;
+    }
+
+    // Leave the shared pins as inputs so the next app starts clean.
+    pinMode(cc.cs, INPUT);
+    if (nrf.cs != cc.cs) pinMode(nrf.cs, INPUT);
+    if (nrf.io0 != GPIO_NUM_NC) pinMode(nrf.io0, INPUT);
+}
+
+void probeRxLine(HatProbeResult &r) {
+    int pin = bruceConfigPins.rfRx;
+    if (pin < 0) return;
+    pinMode(pin, INPUT_PULLDOWN);
+    delay(5);
+
+    const int samples = 6000; // 300 ms at 50 us
+    int high = 0, transitions = 0;
+    int last = digitalRead(pin);
+    for (int i = 0; i < samples; i++) {
+        int v = digitalRead(pin);
+        if (v) high++;
+        if (v != last) transitions++;
+        last = v;
+        delayMicroseconds(50);
+    }
+    pinMode(pin, INPUT);
+
+    r.rxChecked = true;
+    r.rxTransitions = transitions;
+    r.rxHighPercent = (high * 100) / samples;
+    r.ookLikely = transitions > 20;
+    r.irLikely = !r.ookLikely && r.rxHighPercent > 95;
+}
+
+String hex2(uint8_t v) {
+    char buf[5];
+    snprintf(buf, sizeof(buf), "0x%02X", v);
+    return String(buf);
+}
+
+} // namespace
+
+int HatProbeResult::liveCount() const {
+    return int(pn532) + int(cc1101) + int(nrf24) + int(irLikely) + int(ookLikely);
+}
+
+String HatProbeResult::summary() const {
+    std::vector<String> live;
+    if (cc1101) live.push_back("CC1101 (DIP 1)");
+    if (nrf24) live.push_back("nRF24 (DIP 2)");
+    if (pn532) live.push_back("PN532 (DIP 3)");
+    if (irLikely) live.push_back("IR, likely (DIP 4)");
+    if (ookLikely) live.push_back("433 OOK, likely (DIP 5)");
+    if (live.empty()) return "none";
+    String s = live[0];
+    for (size_t i = 1; i < live.size(); i++) s += ", " + live[i];
+    return s;
+}
+
+String HatProbeResult::advice() const {
+    int n = liveCount();
+    if (n == 0) return "Nothing answered. Turn ON one of DIP 1-5.";
+    if (n > 1) return "More than one module is on. Only one of DIP 1-5 at a time.";
+    if (irLikely || ookLikely)
+        return "IR/433 have no bus to ask; this is a guess from the RX pin.";
+    return "Ready.";
+}
+
+HatProbeResult probeHat() {
+    HatProbeResult r;
+    probeI2C(r);
+    // The SPI radios sit on the same two pins as I2C. If the PN532 answered,
+    // driving those pins as SPI would fight it, so stop here.
+    if (!r.pn532) probeSPI(r);
+    if (r.liveCount() == 0) probeRxLine(r);
+    return r;
+}
+
+std::vector<String> hatReportLines(const HatProbeResult &r) {
+    std::vector<String> l;
+    l.push_back("Live: " + r.summary());
+    l.push_back(r.advice());
+    l.push_back("");
+    if (r.pn532) {
+        l.push_back("CC1101  skipped (PN532 owns pins 22/27)");
+        l.push_back("nRF24   skipped (PN532 owns pins 22/27)");
+    } else {
+        l.push_back(String("CC1101  ") + (r.cc1101 ? "yes" : "no") + "  part " + hex2(r.ccPartnum) +
+                    " ver " + hex2(r.ccVersion));
+        if (r.cc1101) l.push_back("nRF24   skipped (CC1101 owns the bus)");
+        else
+            l.push_back(String("nRF24   ") + (r.nrf24 ? "yes" : "no") + "  status " + hex2(r.nrfStatus) +
+                        " aw " + hex2(r.nrfSetupAw));
+    }
+    l.push_back(String("PN532   ") + (r.pn532 ? "yes" : "no") + "  (I2C 0x24)");
+    if (r.rxChecked)
+        l.push_back("RX pin  " + String(r.rxTransitions) + " edges, " + String(r.rxHighPercent) + "% high");
+    else l.push_back("RX pin  not checked (a module already answered)");
+    String other = "I2C other: ";
+    if (r.i2cOther.empty()) other += "none";
+    for (size_t i = 0; i < r.i2cOther.size(); i++) other += (i ? ", " : "") + hex2(r.i2cOther[i]);
+    l.push_back(other);
+    return l;
+}

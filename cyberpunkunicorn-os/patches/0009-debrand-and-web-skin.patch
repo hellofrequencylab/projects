@@ -1,0 +1,842 @@
+diff --git a/embedded_resources/web_interface/index.css b/embedded_resources/web_interface/index.css
+index bda7b42..0b5b27d 100644
+--- a/embedded_resources/web_interface/index.css
++++ b/embedded_resources/web_interface/index.css
+@@ -582,3 +582,64 @@ svg > path {
+     width: 64px;
+   }
+ }
++
++/* ===== CyberUnicorn 5000 skin ===================================== */
++:root {
++  --color: #ff3ec8;
++  --cyan: #00f0ff;
++  --background: #0b0016;
++  --rainbow: linear-gradient(90deg, #ff004c, #ff8a00, #ffe600, #00ff85, #00d4ff, #7a5cff, #ff3ec8, #ff004c);
++}
++@keyframes cu-slide { from { background-position: 0% 50%; } to { background-position: 400% 50%; } }
++@keyframes cu-glow { 0%, 100% { text-shadow: 0 0 6px #ff3ec8, 0 0 14px #ff3ec8; } 50% { text-shadow: 0 0 6px #00f0ff, 0 0 14px #00f0ff; } }
++body {
++  background:
++    linear-gradient(transparent 0 calc(100% - 1px), rgba(0, 240, 255, 0.12) 0) 0 0 / 100% 32px,
++    linear-gradient(90deg, transparent 0 calc(100% - 1px), rgba(255, 62, 200, 0.12) 0) 0 0 / 32px 100%,
++    radial-gradient(ellipse at top, #3a0060 0%, #0b0016 60%);
++  background-attachment: fixed;
++}
++.container .header {
++  border-bottom: 3px solid transparent;
++  border-image: var(--rainbow) 1;
++}
++.container .header .title {
++  background: var(--rainbow);
++  background-size: 400% 100%;
++  -webkit-background-clip: text;
++  background-clip: text;
++  color: transparent;
++  animation: cu-slide 6s linear infinite;
++  font-weight: bold;
++  letter-spacing: 1px;
++}
++.container .header .title * { color: var(--cyan); -webkit-text-fill-color: var(--cyan); }
++.btn-action {
++  border: 1px solid transparent;
++  border-image: var(--rainbow) 1;
++  box-shadow: 0 0 8px rgba(255, 62, 200, 0.35);
++  transition: box-shadow 0.15s, transform 0.15s;
++}
++.btn-action:hover {
++  box-shadow: 0 0 14px #00f0ff, 0 0 4px #ff3ec8 inset;
++  transform: translateY(-1px);
++  animation: cu-glow 1.2s ease-in-out infinite;
++}
++.dialog {
++  border: 2px solid transparent;
++  border-image: var(--rainbow) 1;
++  background-color: #12001f;
++  box-shadow: 0 0 24px rgba(122, 92, 255, 0.5);
++}
++.dialog .dialog-head { background: var(--rainbow); background-size: 400% 100%; animation: cu-slide 8s linear infinite; }
++.dialog .dialog-head span { color: #0b0016; font-weight: bold; }
++input, textarea, select {
++  background-color: #12001f;
++  border: 1px solid var(--cyan);
++  color: var(--cyan);
++}
++a { color: var(--cyan); text-shadow: 0 0 6px var(--cyan); }
++::selection { background: #ff3ec8; color: #0b0016; }
++::-webkit-scrollbar { width: 8px; height: 8px; }
++::-webkit-scrollbar-thumb { background: var(--rainbow); border-radius: 4px; }
++::-webkit-scrollbar-track { background: #12001f; }
+diff --git a/embedded_resources/web_interface/index.html b/embedded_resources/web_interface/index.html
+index 5290300..2626c69 100644
+--- a/embedded_resources/web_interface/index.html
++++ b/embedded_resources/web_interface/index.html
+@@ -3,7 +3,7 @@
+   <head>
+     <meta charset="UTF-8" />
+     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+-    <title>Bruce</title>
++    <title>CyberUnicorn 5000</title>
+     <link rel="stylesheet" href="/index.css" />
+     <link rel="stylesheet" href="/theme.css" />
+   </head>
+@@ -12,7 +12,7 @@
+     <div class="container">
+       <div class="header">
+         <div class="title" onclick="Dialog.show('info')">
+-          Bruce [<span class="bruce-version">dev</span>]
++          CyberUnicorn 5000&trade; [<span class="bruce-version">dev</span>]
+         </div>
+         <div class="left-part">
+           <button class="btn-action act-oinput" data-action="serial">
+@@ -608,9 +608,9 @@
+             Firmware for offensive pranks, pentest studies and analysis - for
+             educational purposes only. Do not use in environments where you are
+             not allowed. All responsibilities for irresponsible usage of this
+-            firmware rest on your fin, sharky.
++            firmware rest on your hooves, unicorn.
+           </p>
+-          <p>Sincerely, Bruce.</p>
++          <p>Sparkle responsibly. &mdash; CyberUnicorn 5000&trade;</p>
+           <p>
+             You can help develop the WebUI interface using
+             <a
+diff --git a/embedded_resources/web_interface/login.html b/embedded_resources/web_interface/login.html
+index f3947c8..b1f493d 100644
+--- a/embedded_resources/web_interface/login.html
++++ b/embedded_resources/web_interface/login.html
+@@ -4,7 +4,7 @@
+ <head>
+     <meta charset="UTF-8">
+     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+-    <title>Bruce</title>
++    <title>CyberUnicorn 5000</title>
+     <link rel="stylesheet" href="/index.css">
+     <link rel="stylesheet" href="/theme.css">
+ </head>
+diff --git a/src/core/config.h b/src/core/config.h
+index 1fd3993..2a1ecf0 100644
+--- a/src/core/config.h
++++ b/src/core/config.h
+@@ -59,9 +59,9 @@ public:
+ #endif
+ 
+     // Wifi
+-    Credential webUI = {"admin", "bruce"};
++    Credential webUI = {"admin", "unicorn"};
+     std::vector<String> webUISessions = {}; // FIFO queue of session tokens
+-    WiFiCredential wifiAp = {"BruceNet", "brucenet"};
++    WiFiCredential wifiAp = {"UnicornNet", "unicorn5000"};
+     std::map<String, String> wifi = {};
+     std::set<String> evilWifiNames = {};
+     String wifiMAC = ""; //@IncursioHack
+@@ -103,10 +103,9 @@ public:
+ #endif
+ 
+     std::vector<QrCodeEntry> qrCodes = {
+-        {"Bruce AP",   "WIFI:T:WPA;S:BruceNet;P:brucenet;;"},
+-        {"Bruce Wiki", "https://github.com/pr3y/Bruce/wiki"},
+-        {"Bruce Site", "https://bruce.computer"            },
+-        {"Rickroll",   "https://youtu.be/dQw4w9WgXcQ"      }
++        {"Unicorn AP", "WIFI:T:WPA;S:UnicornNet;P:unicorn5000;;"},
++        {"Unicorn UI", "http://unicorn.local"},
++                {"Rickroll",   "https://youtu.be/dQw4w9WgXcQ"      }
+     };
+ 
+     /////////////////////////////////////////////////////////////////////////////////////
+diff --git a/src/core/massStorage.cpp b/src/core/massStorage.cpp
+index a1482ca..d0c265c 100644
+--- a/src/core/massStorage.cpp
++++ b/src/core/massStorage.cpp
+@@ -61,7 +61,7 @@ void MassStorage::setupUsbCallback() {
+     uint32_t numSectors = SD.numSectors();
+ 
+     msc.vendorID("ESP32");
+-    msc.productID("BRUCE");
++    msc.productID("CYBERUNICORN");
+     msc.productRevision("1.0");
+ 
+     msc.onRead(usbReadCallback);
+diff --git a/src/core/menu_items/BleMenu.cpp b/src/core/menu_items/BleMenu.cpp
+index ed144ba..edea29f 100644
+--- a/src/core/menu_items/BleMenu.cpp
++++ b/src/core/menu_items/BleMenu.cpp
+@@ -28,7 +28,7 @@ void BleMenu::optionsMenu() {
+     options.push_back({"Media Cmds", [=]() { MediaCommands(hid_ble, true); }});
+     options.push_back({"BLE Scan", ble_scan});
+     options.push_back({"iBeacon", [=]() {
+-                           ibeacon("Bruce", "e4c159a0-8c82-11e6-bdf4-0800200c9a66", 0x004C);
++                           ibeacon("Unicorn", "e4c159a0-8c82-11e6-bdf4-0800200c9a66", 0x004C);
+                        }});
+     options.push_back({"Bad BLE", [=]() { ducky_setup(hid_ble, true); }});
+     options.push_back({"BLE Keyboard", [=]() { ducky_keyboard(hid_ble, true); }});
+diff --git a/src/core/menu_items/WifiMenu.cpp b/src/core/menu_items/WifiMenu.cpp
+index f0c283a..d9809e1 100644
+--- a/src/core/menu_items/WifiMenu.cpp
++++ b/src/core/menu_items/WifiMenu.cpp
+@@ -91,7 +91,7 @@ void WifiMenu::optionsMenu() {
+                        }});
+     options.push_back({"Wireguard", wg_setup});
+     options.push_back({"Responder", responder});
+-    options.push_back({"Brucegotchi", brucegotchi_start});
++    options.push_back({"Unicornagotchi", brucegotchi_start});
+     options.push_back({"WiFi Pass Recovery", wifi_recover_menu});
+ #endif
+ 
+diff --git a/src/core/serial_commands/rfid_commands.cpp b/src/core/serial_commands/rfid_commands.cpp
+index 3ce88d1..dfccb32 100644
+--- a/src/core/serial_commands/rfid_commands.cpp
++++ b/src/core/serial_commands/rfid_commands.cpp
+@@ -228,7 +228,7 @@ uint32_t rfidSaveCallback(cmd *c) {
+     if (format == "flipper") {
+         result = _rfid->saveFlipper(filename);
+         if (result == RFIDInterface::NOT_IMPLEMENTED)
+-            serialDevice->println("Flipper format not supported by this module; using Bruce format.");
++            serialDevice->println("Flipper format not supported by this module; using native format.");
+     } else {
+         result = _rfid->save(filename);
+     }
+@@ -263,7 +263,7 @@ uint32_t rfidNdefCallback(cmd *c) {
+         value += cmd.getArgument(i).getValue();
+     }
+     type.toLowerCase();
+-    if (value.length() == 0) value = (type == "text") ? "Bruce" : "https://bruce.computer";
++    if (value.length() == 0) value = (type == "text") ? "CyberUnicorn 5000" : "http://unicorn.local";
+ 
+     if (!_ensureRfid()) return false;
+ 
+diff --git a/src/core/settings.cpp b/src/core/settings.cpp
+index 6a44125..acc54e4 100644
+--- a/src/core/settings.cpp
++++ b/src/core/settings.cpp
+@@ -1282,7 +1282,7 @@ void setWifiApSsidMenu() {
+     const bool isDefault = bruceConfig.wifiAp.ssid == "BruceNet";
+ 
+     options = {
+-        {"Default (BruceNet)",
++        {"Default (UnicornNet)",
+          [=]() { bruceConfig.setWifiApCreds("BruceNet", bruceConfig.wifiAp.pwd); },
+          isDefault                                                                            },
+         {"Custom",
+@@ -1307,7 +1307,7 @@ void setWifiApPasswordMenu() {
+     const bool isDefault = bruceConfig.wifiAp.pwd == "brucenet";
+ 
+     options = {
+-        {"Default (brucenet)",
++        {"Default (unicorn5000)",
+          [=]() { bruceConfig.setWifiApCreds(bruceConfig.wifiAp.ssid, "brucenet"); },
+          isDefault                                                                             },
+         {"Custom",
+diff --git a/src/core/startup_app.cpp b/src/core/startup_app.cpp
+index 4663a0d..18d9e35 100644
+--- a/src/core/startup_app.cpp
++++ b/src/core/startup_app.cpp
+@@ -26,7 +26,7 @@
+ 
+ StartupApp::StartupApp() {
+ #ifndef LITE_VERSION
+-    _startupApps["Brucegotchi"] = []() { brucegotchi_start(); };
++    _startupApps["Unicornagotchi"] = []() { brucegotchi_start(); };
+     _startupApps["Sniffer"] = []() { sniffer_setup(); };
+     _startupApps["GPS Tracker"] = []() { GPSTracker(); };
+     _startupApps["PN532 BLE"] = []() { Pn532ble(); };
+diff --git a/src/core/wifi/webInterface.cpp b/src/core/wifi/webInterface.cpp
+index 8685413..6e6fd79 100644
+--- a/src/core/wifi/webInterface.cpp
++++ b/src/core/wifi/webInterface.cpp
+@@ -25,7 +25,7 @@ const int default_webserverporthttp = 80;
+ IPAddress AP_GATEWAY(172, 0, 0, 1); // Gateway
+ 
+ AsyncWebServer *server = nullptr; // initialise webserver
+-const char *host = "bruce";
++const char *host = "unicorn";
+ String uploadFolder = "";
+ static bool mdnsRunning = false;
+ 
+@@ -287,12 +287,12 @@ void drawWebUiScreen(bool mode_ap) {
+ 
+     if (mode_ap) {
+         tft.setCursor(padX, currentY);
+-        tft.print("Net: BruceNet/brucenet");
++        tft.print("Net: UnicornNet/unicorn5000");
+         currentY += LH * FP + 6;
+     }
+ 
+     tft.setCursor(padX, currentY);
+-    if (mdnsRunning) tft.print("Url: http://bruce.local");
++    if (mdnsRunning) tft.print("Url: http://unicorn.local");
+     currentY += LH * FP + 6;
+ 
+     tft.setCursor(padX, currentY);
+@@ -471,7 +471,7 @@ void configureWebServer() {
+                 "{\"%s\":\"%s\",\"SD\":{\"%s\":\"%s\",\"%s\":\"%s\",\"%s\":\"%s\"},"
+                 "\"LittleFS\":{\"%s\":\"%s\",\"%s\":\"%s\",\"%s\":\"%s\"}}",
+                 "BRUCE_VERSION",
+-                BRUCE_VERSION,
++                OS_VERSION, // CyberUnicorn 5000 version shown in the web UI header
+                 "free",
+                 humanReadableSize(SDTotalBytes - SDUsedBytes).c_str(),
+                 "used",
+diff --git a/src/main.cpp b/src/main.cpp
+index 2cde63a..873bd4e 100644
+--- a/src/main.cpp
++++ b/src/main.cpp
+@@ -263,7 +263,7 @@ void begin_tft() {
+  *********************************************************************/
+ // Boot screen text, overridable at build time (nm-rf-hat/boot.conf).
+ #ifndef BOOT_TITLE
+-#define BOOT_TITLE "Bruce"
++#define BOOT_TITLE "CyberUnicorn"
+ #endif
+ #ifndef BOOT_TAGLINE
+ #define BOOT_TAGLINE "PREDATORY FIRMWARE"
+diff --git a/src/modules/badusb_ble/ducky_typer.cpp b/src/modules/badusb_ble/ducky_typer.cpp
+index c1a2f5e..0d92520 100644
+--- a/src/modules/badusb_ble/ducky_typer.cpp
++++ b/src/modules/badusb_ble/ducky_typer.cpp
+@@ -628,7 +628,7 @@ void ducky_startKb(HIDInterface *&hid, bool ble, int functionId) {
+             Serial.printf("[ducky_startKb] Active BLE instances: %d\n", activeBLEInstances);
+ 
+             // Create HID service
+-            hid = new BleKeyboard(deviceName, "BruceFW", 100);
++            hid = new BleKeyboard(deviceName, "CyberUnicorn", 100);
+             Serial.println("[ducky_startKb] New BleKeyboard created");
+ 
+             // Set hid_ble to point to the active instance
+diff --git a/src/modules/bjs_interpreter/ble_js.cpp b/src/modules/bjs_interpreter/ble_js.cpp
+index ee9d38a..b04760c 100644
+--- a/src/modules/bjs_interpreter/ble_js.cpp
++++ b/src/modules/bjs_interpreter/ble_js.cpp
+@@ -49,7 +49,7 @@ JSValue native_bleScan(JSContext *ctx, JSValue *this_val, int argc, JSValue *arg
+ 
+ JSValue native_bleAdvertise(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv) {
+     // usage: ble.advertise(name_string)
+-    const char *name = "Bruce-App";
++    const char *name = "Unicorn-App";
+     JSCStringBuf name_buf;
+     if (argc > 0 && JS_IsString(ctx, argv[0])) {
+         name = JS_ToCString(ctx, argv[0], &name_buf);
+diff --git a/src/modules/ble/BLE_Suite.cpp b/src/modules/ble/BLE_Suite.cpp
+index aeff1c5..6e82803 100644
+--- a/src/modules/ble/BLE_Suite.cpp
++++ b/src/modules/ble/BLE_Suite.cpp
+@@ -361,7 +361,7 @@ void BLEAttackManager::prepareForConnection() {
+         delay(300);
+     }
+ 
+-    BLEStateManager::initBLE("Bruce-Attack", ESP_PWR_LVL_P9);
++    BLEStateManager::initBLE("Unicorn-Attack", ESP_PWR_LVL_P9);
+     NimBLEDevice::setMTU(250);
+     NimBLEDevice::setSecurityAuth(true, true, true);
+     delay(300);
+@@ -489,7 +489,7 @@ NimBLEClient *attemptConnectionWithStrategies(NimBLEAddress target, String &conn
+     showAttackProgress("Trying exploit-based connection...", TFT_ORANGE);
+     BLEStateManager::deinitBLE(true);
+     delay(800);
+-    std::string exploitName = "Bruce-Exploit";
++    std::string exploitName = "Unicorn-Exploit";
+     NimBLEDevice::init(exploitName);
+     NimBLEDevice::setPower(ESP_PWR_LVL_P9);
+     NimBLEDevice::setSecurityAuth(false, false, false);
+@@ -2379,7 +2379,7 @@ MultiConnectionAttack::~MultiConnectionAttack() { cleanup(); }
+ bool MultiConnectionAttack::connectionFloodSingle(NimBLEAddress target, int timeout) {
+     BLEStateManager::deinitBLE(true);
+     delay(100);
+-    std::string floodName = "Bruce-Flooder";
++    std::string floodName = "Unicorn-Flooder";
+     NimBLEDevice::init(floodName);
+     NimBLEDevice::setPower(ESP_PWR_LVL_P9);
+ 
+@@ -2428,7 +2428,7 @@ bool MultiConnectionAttack::connectionFlood(std::vector<NimBLEAddress> targets,
+ bool MultiConnectionAttack::advertisingSpamSingle(NimBLEAddress target) {
+     BLEStateManager::deinitBLE(true);
+     delay(300);
+-    std::string spamName = "Bruce-Spammer";
++    std::string spamName = "Unicorn-Spammer";
+     NimBLEDevice::init(spamName);
+     NimBLEDevice::setPower(ESP_PWR_LVL_P9);
+ 
+@@ -2437,7 +2437,7 @@ bool MultiConnectionAttack::advertisingSpamSingle(NimBLEAddress target) {
+ 
+     uint8_t bruceData[] = {0xFF, 0xFF, 'B', 'R', 'U', 'C', 'E'};
+     pAdvertising->setManufacturerData(bruceData, sizeof(bruceData));
+-    pAdvertising->setName("Bruce-Spammer");
++    pAdvertising->setName("Unicorn-Spammer");
+     pAdvertising->addServiceUUID(NimBLEUUID("12345678-1234-5678-1234-567812345678"));
+ 
+     pAdvertising->start(0);
+@@ -2843,7 +2843,7 @@ bool PairingAttackServiceClass::bruteForcePIN(NimBLEAddress target) {
+ 
+         BLEStateManager::deinitBLE(true);
+         delay(300);
+-        std::string pinName = "Bruce-PINBrute";
++        std::string pinName = "Unicorn-PINBrute";
+         NimBLEDevice::init(pinName);
+         NimBLEDevice::setSecurityAuth(true, true, true);
+         NimBLEDevice::setPower(ESP_PWR_LVL_P9);
+@@ -2900,7 +2900,7 @@ bool DoSAttackServiceClass::connectionFlood(NimBLEAddress target) {
+ 
+         BLEStateManager::deinitBLE(true);
+         delay(100);
+-        std::string floodName = "Bruce-Flooder";
++        std::string floodName = "Unicorn-Flooder";
+         NimBLEDevice::init(floodName);
+         NimBLEDevice::setPower(ESP_PWR_LVL_P9);
+ 
+@@ -2930,7 +2930,7 @@ bool DoSAttackServiceClass::advertisingSpam(NimBLEAddress target) {
+ 
+     BLEStateManager::deinitBLE(true);
+     delay(300);
+-    std::string spamName = "Bruce-Spammer";
++    std::string spamName = "Unicorn-Spammer";
+     NimBLEDevice::init(spamName);
+     NimBLEDevice::setPower(ESP_PWR_LVL_P9);
+ 
+@@ -2942,7 +2942,7 @@ bool DoSAttackServiceClass::advertisingSpam(NimBLEAddress target) {
+ 
+     uint8_t spamData[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+     pAdvertising->setManufacturerData(spamData, sizeof(spamData));
+-    pAdvertising->setName("Bruce-Spammer");
++    pAdvertising->setName("Unicorn-Spammer");
+     pAdvertising->addServiceUUID(NimBLEUUID("12345678-1234-5678-1234-567812345678"));
+ 
+     const int SPAM_DURATION = 10000;
+@@ -3879,7 +3879,7 @@ static String parseManufacturerData(const std::vector<uint8_t> &payload) {
+ 
+ void BLE_Sniffer() {
+     // FIX: Always init - handles case where stack was deinit'd by another module
+-    BLEStateManager::initBLE("BruceSniffer", ESP_PWR_LVL_P9);
++    BLEStateManager::initBLE("UnicornSniffer", ESP_PWR_LVL_P9);
+     NimBLEScan *pScan = nullptr;
+     bool firstRun = true;
+     bool redraw = true;
+@@ -3906,7 +3906,7 @@ void BLE_Sniffer() {
+         bool isSelPressed = check(SelPress);
+         if (isSelPressed && snifferPacketCount == 0) {
+             if (firstRun) {
+-                BLEStateManager::initBLE("BruceSniffer", ESP_PWR_LVL_P9);
++                BLEStateManager::initBLE("UnicornSniffer", ESP_PWR_LVL_P9);
+                 pScan = NimBLEDevice::getScan();
+                 if (!pScan) {
+                     displayError("Failed to init scanner");
+@@ -4157,7 +4157,7 @@ String selectTargetFromScan(const char *title) {
+ #endif
+ 
+     // FIX: Always call initBLE - it handles the case where stack was deinit'd
+-    if (!BLEStateManager::initBLE("Bruce-Scanner", ESP_PWR_LVL_P9)) {
++    if (!BLEStateManager::initBLE("Unicorn-Scanner", ESP_PWR_LVL_P9)) {
+         displayError("Failed to init BLE");
+         return "";
+     }
+@@ -4887,8 +4887,8 @@ void showWelcomeScreen() {
+     TouchFooter();
+     tft.setTextSize(4);
+     tft.setTextColor(TFT_PURPLE, bruceConfig.bgColor);
+-    tft.setCursor((tftWidth - tft.textWidth("BRUCE")) / 2, 35);
+-    tft.print("BRUCE");
++    tft.setCursor((tftWidth - tft.textWidth("UNICORN")) / 2, 35);
++    tft.print("UNICORN");
+ 
+     tft.setTextColor(TFT_BLUE, bruceConfig.bgColor);
+     tft.setTextSize(2);
+@@ -4910,7 +4910,7 @@ void showWelcomeScreen() {
+ 
+ void BleSuiteMenu() {
+     // FIX: Init BLE stack ONCE when entering the suite
+-    BLEStateManager::initBLE("Bruce-BLESuite", ESP_PWR_LVL_P9);
++    BLEStateManager::initBLE("Unicorn-BLESuite", ESP_PWR_LVL_P9);
+ 
+     // Clear data when entering the menu
+     scannerData.clear();
+@@ -5049,7 +5049,7 @@ const char *getScanTitle(int attackIndex) {
+ 
+ void executeAttackWithTargetScan(int attackIndex) {
+     // FIX: Ensure BLE is initialized for the attack
+-    BLEStateManager::initBLE("Bruce-Attack", ESP_PWR_LVL_P9);
++    BLEStateManager::initBLE("Unicorn-Attack", ESP_PWR_LVL_P9);
+ 
+     String targetInfo = selectTargetFromScan(getScanTitle(attackIndex));
+     if (targetInfo.isEmpty()) return;
+diff --git a/src/modules/ble/ble_common.cpp b/src/modules/ble/ble_common.cpp
+index e814d03..d09c677 100644
+--- a/src/modules/ble/ble_common.cpp
++++ b/src/modules/ble/ble_common.cpp
+@@ -251,7 +251,7 @@ void ble_scan() {
+ 
+ bool initBLEServer() {
+     uint64_t chipid = ESP.getEfuseMac();
+-    String blename = "Bruce-" + String((uint8_t)(chipid >> 32), HEX);
++    String blename = "Unicorn-" + String((uint8_t)(chipid >> 32), HEX);
+ 
+     if (!is_ble_inited) {
+         BLEDevice::init(blename.c_str());
+@@ -306,7 +306,7 @@ void disPlayBLESend() {
+     pServer->getAdvertising()->start();
+ 
+     uint64_t chipid = ESP.getEfuseMac();
+-    String blename = "Bruce-" + String((uint8_t)(chipid >> 32), HEX);
++    String blename = "Unicorn-" + String((uint8_t)(chipid >> 32), HEX);
+ 
+     BLEConnected = true;
+ 
+diff --git a/src/modules/ble/ble_spam.h b/src/modules/ble/ble_spam.h
+index 4c2784f..bf7ea66 100644
+--- a/src/modules/ble/ble_spam.h
++++ b/src/modules/ble/ble_spam.h
+@@ -1,13 +1,13 @@
+-#pragma once
+-
+-#include <Arduino.h>
+-#include <NimBLEBeacon.h>
+-#include <NimBLEDevice.h>
+-#include <NimBLEServer.h>
+-#include <NimBLEUtils.h>
+-void spamMenu();
+-
+-void ibeacon(
+-    const char *DeviceName = "Bruce iBeacon", const char *BEACON_UUID = "8ec76ea3-6668-48da-9866-75be8bc86f4d",
+-    int ManufacturerId = 0x4C00
+-);
++#pragma once
++
++#include <Arduino.h>
++#include <NimBLEBeacon.h>
++#include <NimBLEDevice.h>
++#include <NimBLEServer.h>
++#include <NimBLEUtils.h>
++void spamMenu();
++
++void ibeacon(
++    const char *DeviceName = "Unicorn iBeacon", const char *BEACON_UUID = "8ec76ea3-6668-48da-9866-75be8bc86f4d",
++    int ManufacturerId = 0x4C00
++);
+diff --git a/src/modules/ble_api/ble_api.cpp b/src/modules/ble_api/ble_api.cpp
+index 9d4c070..53d6c22 100644
+--- a/src/modules/ble_api/ble_api.cpp
++++ b/src/modules/ble_api/ble_api.cpp
+@@ -20,7 +20,7 @@ public:
+ };
+ 
+ void BLE_API::setup() {
+-    NimBLEDevice::init("Bruce");
++    NimBLEDevice::init("CyberUnicorn");
+     NimBLEDevice::setPower(ESP_PWR_LVL_P9); // 9 dBm, tweak if you want
+ 
+     pServer = NimBLEDevice::createServer();
+diff --git a/src/modules/fm/fm.cpp b/src/modules/fm/fm.cpp
+index 2593b67..c771ea2 100644
+--- a/src/modules/fm/fm.cpp
++++ b/src/modules/fm/fm.cpp
+@@ -14,7 +14,7 @@ void set_frq(uint16_t frq) { fm_station = frq; }
+ void fm_banner() {
+     tft.fillScreen(bruceConfig.bgColor);
+     tft.setCursor(10, 10);
+-    tft.drawCentreString("~== Bruce Radio ==~", tftWidth / 2, 10, SMOOTH_FONT);
++    tft.drawCentreString("~== Unicorn Radio ==~", tftWidth / 2, 10, SMOOTH_FONT);
+     delay(500);
+ }
+ 
+@@ -278,7 +278,7 @@ bool fm_setup(bool traffic_alert, bool silent) {
+         radio.setRDSbuffer("Traffic Info");
+     } else {
+         radio.setRDSstation("BruceRadio");
+-        radio.setRDSbuffer("Pwned by Bruce Radio!");
++        radio.setRDSbuffer("Pwned by Unicorn Radio!");
+     }
+ 
+     if (!silent) {
+diff --git a/src/modules/gps/gps_tracker.cpp b/src/modules/gps/gps_tracker.cpp
+index 533d2e8..3393711 100644
+--- a/src/modules/gps/gps_tracker.cpp
++++ b/src/modules/gps/gps_tracker.cpp
+@@ -166,7 +166,7 @@ void GPSTracker::add_initial_file_data(File file) {
+     file.println("<?xml-stylesheet type=\"text/xsl\" href=\"details.xsl\"?>");
+     file.println("<gpx");
+     file.println("  version=\"1.1\"");
+-    file.println("  creator=\"Bruce Firmware\"");
++    file.println("  creator=\"CyberUnicorn 5000\"");
+     file.println("  xmlns=\"http://www.topografix.com/GPX/1/1\"");
+     file.println("  xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"");
+     file.println(
+@@ -174,15 +174,15 @@ void GPSTracker::add_initial_file_data(File file) {
+     );
+     file.println(">");
+     file.println("  <metadata>");
+-    file.println("    <name>Bruce GPS Tracker</name>");
+-    file.println("    <desc>GPS Tracker using Bruce Firmware</desc>");
+-    file.println("    <link href=\"https://bruce.computer\">");
+-    file.println("      <text>Bruce Website</text>");
++    file.println("    <name>CyberUnicorn GPS Tracker</name>");
++    file.println("    <desc>GPS Tracker using CyberUnicorn 5000</desc>");
++    file.println("    <link href=\"http://unicorn.local\">");
++    file.println("      <text>CyberUnicorn 5000</text>");
+     file.println("    </link>");
+     file.println("  </metadata>");
+     file.println("  <trk>");
+-    file.println("    <name>Bruce Route</name>");
+-    file.println("    <desc>GPS route captured by Bruce firmware</desc>");
++    file.println("    <name>CyberUnicorn Route</name>");
++    file.println("    <desc>GPS route captured by CyberUnicorn 5000</desc>");
+     file.println("    <trkseg>");
+ }
+ 
+diff --git a/src/modules/lora/LoRaRF.cpp b/src/modules/lora/LoRaRF.cpp
+index b1daf25..c8ee498 100644
+--- a/src/modules/lora/LoRaRF.cpp
++++ b/src/modules/lora/LoRaRF.cpp
+@@ -388,7 +388,7 @@ void lorachat() {
+         JsonDocument doc;
+         File file = LittleFS.open("/lora_settings.json", "w");
+         doc["LoRa_Frequency"] = "434500000.00";
+-        doc["LoRa_Name"] = "BruceTest";
++        doc["LoRa_Name"] = "UnicornTest";
+         doc["LoRa_Radio"] = "SX1276";
+         serializeJson(doc, file);
+         file.close();
+diff --git a/src/modules/pwnagotchi/pwngrid.cpp b/src/modules/pwnagotchi/pwngrid.cpp
+index 52a63bb..691b0e5 100644
+--- a/src/modules/pwnagotchi/pwngrid.cpp
++++ b/src/modules/pwnagotchi/pwngrid.cpp
+@@ -100,7 +100,7 @@ esp_err_t pwngridAdvertise(uint8_t channel, const String &face) {
+     String pal_json_str = "";
+ 
+     pal_json["pal"] = true; // Also detect other Palnagotchis
+-    pal_json["name"] = "Bruce";
++    pal_json["name"] = "CyberUnicorn";
+     pal_json["face"] = face;
+     pal_json["epoch"] = 1;
+     pal_json["grid_version"] = "1.10.3";
+diff --git a/src/modules/pwnagotchi/spam.cpp b/src/modules/pwnagotchi/spam.cpp
+index 23e6a54..2cae01b 100644
+--- a/src/modules/pwnagotchi/spam.cpp
++++ b/src/modules/pwnagotchi/spam.cpp
+@@ -280,7 +280,7 @@ void loadFacesAndNames() {
+         faces[i++] = "♬♪♬♪♬♪♬";
+         faces[i++] = "(X‿‿X)";
+         faces[i++] = "(u W u)";
+-        faces[i++] = "(BRUCE)";
++        faces[i++] = "(UNICORN)";
+         faces[i++] = "(.)(.)";
+         faces[i++] = "ლ(o_oლ)";
+         faces[i++] = "(O﹏o)";
+@@ -291,15 +291,15 @@ void loadFacesAndNames() {
+         faces[i++] = "NOPWND!\n■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■";
+         num_faces = i;
+         i = 0;
+-        names[i++] = "my name is... BRUCE!";
+-        names[i++] = "Check M5 Bruce Project";
++        names[i++] = "my name is... UNICORN!";
++        names[i++] = "Check CyberUnicorn 5000";
+         names[i++] = "┌∩┐(◣_◢)┌∩┐";
+         names[i++] = "(╯°□°)╯╭╮(XoX)";
+         names[i++] = "STOP DEAUTH SKIDZ!";
+         names[i++] = "System Breached oups";
+         names[i++] = "Unauthorized  Access";
+         names[i++] = "Security  Compromised.. reboot";
+-        names[i++] = "Warning...Bruce's here";
++        names[i++] = "Warning...Unicorn's here";
+         names[i++] = "Critical Error need reboot";
+         names[i++] = "No more Battery";
+         names[i++] = "Never gonna give you up";
+diff --git a/src/modules/reverseShell/reverseShell.cpp b/src/modules/reverseShell/reverseShell.cpp
+index 7aaeb97..168d171 100644
+--- a/src/modules/reverseShell/reverseShell.cpp
++++ b/src/modules/reverseShell/reverseShell.cpp
+@@ -22,7 +22,7 @@ void ReverseShell() {
+         switch (type) {
+             case WS_EVT_CONNECT:
+                 wsConnected = true;
+-                client->text("Connected to BruceShell!\r\n");
++                client->text("Connected to UnicornShell!\r\n");
+                 break;
+ 
+             case WS_EVT_DISCONNECT:
+@@ -83,12 +83,12 @@ void ReverseShell() {
+     }
+ 
+     // ── AP Password: bruce ─────────────────────────────────────
+-    if (!WiFi.softAP("BruceShell", "bruce")) {
++    if (!WiFi.softAP("UnicornShell", "unicorn5000")) {
+         tft.println("Failed to start AP");
+         return;
+     }
+ 
+-    tft.println("Wi-Fi AP Started: BruceShell (pass: bruce)");
++    tft.println("Wi-Fi AP Started: UnicornShell (pass: unicorn5000)");
+     tft.println("IP: " + apGateway.toString());
+ 
+     tcpServer.begin();
+@@ -176,7 +176,7 @@ void ReverseShell() {
+             tcpClient = tcpServer.accept();
+             if (tcpClient) {
+                 tft.println("Client connected.");
+-                tcpClient.println("~Welcome to BruceShell.");
++                tcpClient.println("~Welcome to UnicornShell.");
+                 tcpClient.println("~Developed by Fourier & Ninja-jr");
+                 tcpClient.println("~Type 'help' for available commands");
+                 shellConnected = true;
+diff --git a/src/modules/rfid/PN532.cpp b/src/modules/rfid/PN532.cpp
+index 35ab471..7c9455f 100644
+--- a/src/modules/rfid/PN532.cpp
++++ b/src/modules/rfid/PN532.cpp
+@@ -514,7 +514,7 @@ int PN532::emulate() {
+             if ((!canParseUltralightDump ||
+                  !extractNdefMessageFromPageDump(strAllPages, emulatedNdefMessage))) {
+                 if (!buildNdefMessageFromStruct(this->ndefMessage, emulatedNdefMessage)) {
+-                    std::vector<uint8_t> uriPayload = Ndef::urlNdefAbbrv("https://bruce.computer");
++                    std::vector<uint8_t> uriPayload = Ndef::urlNdefAbbrv("http://unicorn.local");
+                     emulatedNdefMessage = Ndef::newMessage(uriPayload);
+                 }
+             }
+diff --git a/src/modules/rfid/PN532KillerTools.cpp b/src/modules/rfid/PN532KillerTools.cpp
+index 7ac57b5..8e13d8c 100644
+--- a/src/modules/rfid/PN532KillerTools.cpp
++++ b/src/modules/rfid/PN532KillerTools.cpp
+@@ -727,7 +727,7 @@ public:
+ bool PN532KillerTools::enableBleDataTransfer() {
+     if (bleDataTransferEnabled) return true;
+ 
+-    BLEDevice::init("BRUCE-PN532-BLE");
++    BLEDevice::init("UNICORN-PN532-BLE");
+     pServer = BLEDevice::createServer();
+     if (!pServer) {
+         displayError("BLE Server Fail");
+@@ -920,7 +920,7 @@ void PN532KillerTools::udpWifiSelectMenu() {
+     selOptions.push_back({"AP Mode", [&]() {
+                               displayInfo("Starting AP...");
+                               WiFi.mode(WIFI_AP);
+-                              WiFi.softAP("BRUCE-UDP", "", 6);
++                              WiFi.softAP("UNICORN-UDP", "", 6);
+                               delay(200);
+                               enableUdpDataTransfer();
+                           }});
+diff --git a/src/modules/rfid/ST25R3916.cpp b/src/modules/rfid/ST25R3916.cpp
+index 4c5f89e..67ab0c4 100644
+--- a/src/modules/rfid/ST25R3916.cpp
++++ b/src/modules/rfid/ST25R3916.cpp
+@@ -474,7 +474,7 @@ bool ST25R3916::_buildLoadedNdefMessage(std::vector<uint8_t> &ndefOut) {
+     if (st25ExtractNdefMessageFromPageDump(strAllPages, ndefOut)) return true;
+     if (st25BuildNdefMessageFromStruct(ndefMessage, ndefOut)) return true;
+ 
+-    std::vector<uint8_t> uriPayload = Ndef::urlNdefAbbrv("https://bruce.computer");
++    std::vector<uint8_t> uriPayload = Ndef::urlNdefAbbrv("http://unicorn.local");
+     ndefOut = Ndef::newMessage(uriPayload);
+     return !ndefOut.empty();
+ }
+@@ -3065,8 +3065,8 @@ void ST25R3916::_buildT4TFiles() {
+         memcpy(&rec[4], ndefMessage.payload, ndefMessage.payloadSize);
+         rl = (uint16_t)(4 + ndefMessage.payloadSize);
+     } else {
+-        // Default: URI "https://bruce.computer".
+-        const char *url = "bruce.computer";
++        // Default: URI "http://unicorn.local".
++        const char *url = "unicorn.local";
+         uint8_t ul = (uint8_t)strlen(url);
+         rec[0] = 0xD1;
+         rec[1] = 0x01;
+diff --git a/src/modules/rfid/pn532ble.cpp b/src/modules/rfid/pn532ble.cpp
+index de2ca71..d07abc1 100644
+--- a/src/modules/rfid/pn532ble.cpp
++++ b/src/modules/rfid/pn532ble.cpp
+@@ -199,7 +199,7 @@ void Pn532ble::loadNdefEmulateMenu() {
+     String prefix = "";
+ 
+     options = {
+-        {"Visit Bruce", [&]() { prefix = "https://bruce.computer"; }},
++        {"Visit Unicorn", [&]() { prefix = "http://unicorn.local"; }},
+         {"Open Url",    [&]() { prefix = "https://"; }              },
+         {"Phone Call",  [&]() { prefix = "tel:"; }                  },
+         {"Send Email",  [&]() { prefix = "mailto:"; }               },
+diff --git a/src/modules/wifi/clients.cpp b/src/modules/wifi/clients.cpp
+index 6edb9b0..6403797 100644
+--- a/src/modules/wifi/clients.cpp
++++ b/src/modules/wifi/clients.cpp
+@@ -166,7 +166,7 @@ void startSessionLog(ClientProtocol protocol) {
+             sessionLogEnabled = true;
+             sessionLogPath = candidate;
+ 
+-            String header = "=== Bruce Terminal Session ===\n";
++            String header = "=== CyberUnicorn Terminal Session ===\n";
+             header += "Protocol: " + String(getProtocolName(protocol)) + "\n";
+             header += "Host: " + sessionHost + "\n";
+             if (!sessionUser.isEmpty()) header += "User: " + sessionUser + "\n";
+diff --git a/src/modules/wifi/karma_attack.cpp b/src/modules/wifi/karma_attack.cpp
+index 16cf0a1..3a0bd11 100644
+--- a/src/modules/wifi/karma_attack.cpp
++++ b/src/modules/wifi/karma_attack.cpp
+@@ -47,7 +47,7 @@ static bool ensureKarmaApInterface(uint8_t channel) {
+             Serial.println("[KARMA] Failed to switch WiFi to AP mode");
+             return false;
+         }
+-        if (!WiFi.softAP("BruceKarma", "", channel, 1, 4, false)) {
++        if (!WiFi.softAP("UnicornKarma", "", channel, 1, 4, false)) {
+             Serial.println("[KARMA] Failed to start AP interface");
+             return false;
+         }
+diff --git a/src/modules/wifi/responder.cpp b/src/modules/wifi/responder.cpp
+index b56b3e5..d8e4006 100644
+--- a/src/modules/wifi/responder.cpp
++++ b/src/modules/wifi/responder.cpp
+@@ -574,13 +574,13 @@ void responder() {
+     tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
+     if (!wifiConnected) wifiConnectMenu();
+ 
+-    netbiosname_str = keyboard("Bruce", 20);
++    netbiosname_str = keyboard("Unicorn", 20);
+     if (netbiosname_str == "\x1B") return;
+     netbiosName = stringTochar(netbiosname_str);
+-    netbiosdomain_str = keyboard("BRUCEGROUP", 20);
++    netbiosdomain_str = keyboard("UNICORNGROUP", 20);
+     if (netbiosdomain_str == "\x1B") return;
+     netbiosDomain = stringTochar(netbiosdomain_str);
+-    dnsdomain_str = keyboard("Bruce.Local", 20);
++    dnsdomain_str = keyboard("Unicorn.Local", 20);
+     if (dnsdomain_str == "\x1B") return;
+     dnsDomain = stringTochar(dnsdomain_str);
+ 
+diff --git a/src/modules/wifi/sniffer.cpp b/src/modules/wifi/sniffer.cpp
+index 1d52466..0a88dbe 100644
+--- a/src/modules/wifi/sniffer.cpp
++++ b/src/modules/wifi/sniffer.cpp
+@@ -1187,8 +1187,8 @@ void sniffer_setup() {
+     ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_RAM));
+ 
+     wifi_config_t wifi_config;
+-    strlcpy((char *)wifi_config.ap.ssid, "BruceSniffer", sizeof(wifi_config.ap.ssid));
+-    strlcpy((char *)wifi_config.ap.password, "brucenet", sizeof(wifi_config.ap.password));
++    strlcpy((char *)wifi_config.ap.ssid, "UnicornSniffer", sizeof(wifi_config.ap.ssid));
++    strlcpy((char *)wifi_config.ap.password, "unicorn5000", sizeof(wifi_config.ap.password));
+     wifi_config.ap.ssid_len = strlen("BruceSniffer");
+     wifi_config.ap.channel = 1;                   // Channel
+     wifi_config.ap.authmode = WIFI_AUTH_WPA2_PSK; // auth mode
+diff --git a/src/modules/wifi/wifi_atks.cpp b/src/modules/wifi/wifi_atks.cpp
+index 26ae1cc..a0bba1b 100644
+--- a/src/modules/wifi/wifi_atks.cpp
++++ b/src/modules/wifi/wifi_atks.cpp
+@@ -22,7 +22,7 @@
+ #include <globals.h>
+ #include <nvs_flash.h>
+ 
+-#define WIFI_ATK_NAME "BruceAttack"
++#define WIFI_ATK_NAME "UnicornAttack"
+ extern bool showHiddenNetworks;
+ 
+ const uint8_t _default_target[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+@@ -730,7 +730,7 @@ const char Beacons[] PROGMEM = {"Mom Use This One\n"
+                                 "Starbucks Wi-Fi\n"
+ #endif
+                                 "Text 64ALL for Password\n"
+-                                "Yell BRUCE for Password\n"
++                                "Yell UNICORN for Password\n"
+                                 "The Password Is 1234\n"
+                                 "Free Public Wi-Fi\n"
+                                 "No Free Wi-Fi Here\n"
+@@ -862,7 +862,7 @@ void beaconAttack() {
+     FS *fs;
+ #if !defined(LITE_VERSION)
+     if (BeaconMode == 4) {
+-        singleSSID = keyboard("BruceBeacon", 26, "Base SSID:");
++        singleSSID = keyboard("UnicornBeacon", 26, "Base SSID:");
+         if (singleSSID.length() == 0 || singleSSID == "\x1B") { return; }
+     }
+ #endif

@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bruce Remote</title>
+<style>
+  :root {
+    --bg: #f4f4f2; --panel: #ffffff; --ink: #1d1d1b; --muted: #6b6b66;
+    --line: #dddcd6; --accent: #c9a400; --ok: #2f8f46; --warn: #b5651d;
+    --btn: #ecebe6; --btn-hover: #e1e0d9; --console: #1b1b1a; --console-ink: #d8d8d0;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #141413; --panel: #1f1f1d; --ink: #ecebe6; --muted: #9a9991;
+      --line: #33332f; --btn: #2a2a27; --btn-hover: #353531; --console: #0e0e0d;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+         font: 14px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+  main { max-width: 760px; margin: 0 auto; padding: 20px 16px 32px; }
+  header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+  h1 { font-size: 17px; margin: 0; letter-spacing: .01em; }
+  #status { font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 6px; }
+  #dot { width: 8px; height: 8px; border-radius: 50%; background: var(--warn); }
+  #dot.ok { background: var(--ok); }
+  .device { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 16px; }
+  .screen-wrap { background: #000; border-radius: 6px; padding: 6px; line-height: 0; position: relative; }
+  canvas { width: 100%; height: auto; image-rendering: pixelated; display: block; cursor: pointer; }
+  /* Touch-zone overlay: matches Bruce's 3x3 touchHeatMap (core/utils.cpp). */
+  #zones { position: absolute; inset: 6px; display: grid; pointer-events: none;
+           grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr);
+           opacity: 0; transition: opacity .15s; }
+  #zones.show { opacity: 1; }
+  #zones span { border: 1px solid rgba(201,164,0,.5); display: flex; align-items: center;
+                justify-content: center; font: 11px -apple-system, sans-serif; color: #c9a400;
+                background: rgba(201,164,0,.08); }
+  #zones span.flash { background: rgba(201,164,0,.55); color: #000; }
+  .controls { display: grid; grid-template-columns: repeat(3, 1fr) 1fr; gap: 8px; margin-top: 14px; }
+  .dpad { grid-column: 1 / 4; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .side { display: grid; gap: 8px; }
+  button { font: inherit; color: var(--ink); background: var(--btn); border: 1px solid var(--line);
+           border-radius: 8px; padding: 10px 6px; cursor: pointer; }
+  button:hover { background: var(--btn-hover); }
+  button:active, button.flash { background: var(--accent); color: #000; border-color: var(--accent); }
+  button small { display: block; font-size: 10px; color: var(--muted); }
+  button:active small, button.flash small { color: #000; }
+  .sel { font-weight: 600; }
+  .screen-tools { margin-top: 12px; }
+  .screen-tools button { padding: 7px 12px; font-size: 13px; }
+  .screen-tools button[aria-pressed="true"] { background: var(--accent); color: #000; border-color: var(--accent); }
+  .hint { font-size: 12px; color: var(--muted); margin: 10px 2px 0; }
+  details { margin-top: 14px; }
+  summary { cursor: pointer; color: var(--muted); font-size: 13px; }
+  #log { background: var(--console); color: var(--console-ink); font: 12px/1.45 Menlo, monospace;
+         height: 220px; overflow: auto; white-space: pre-wrap; word-break: break-all;
+         padding: 10px; border-radius: 8px; margin-top: 8px; }
+  form { display: flex; gap: 8px; margin-top: 8px; }
+  input { flex: 1; min-width: 0; font: 13px Menlo, monospace; padding: 8px 10px; border-radius: 8px;
+          border: 1px solid var(--line); background: var(--panel); color: var(--ink); }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Bruce Remote</h1>
+    <div id="status"><span id="dot"></span><span id="status-text">connecting…</span></div>
+  </header>
+
+  <div class="device">
+    <div class="screen-wrap">
+      <canvas id="screen" width="320" height="240"></canvas>
+      <div id="zones" aria-hidden="true">
+        <span data-nav="esc">Back</span><span data-nav="up">Up</span><span data-nav="next">Next</span>
+        <span data-nav="prev">Prev</span><span data-nav="sel">Select</span><span data-nav="next">Next</span>
+        <span data-nav="prev">Prev</span><span data-nav="down">Down</span><span data-nav="next">Next</span>
+      </div>
+    </div>
+
+    <div class="controls">
+      <div class="dpad">
+        <span></span><button data-nav="up">▲ Up<small>↑</small></button><span></span>
+        <button data-nav="prev">◀ Prev<small>←</small></button>
+        <button data-nav="sel" class="sel">Select<small>Enter</small></button>
+        <button data-nav="next">Next ▶<small>→</small></button>
+        <span></span><button data-nav="down">▼ Down<small>↓</small></button><span></span>
+      </div>
+      <div class="side">
+        <button data-nav="esc">Back<small>Esc</small></button>
+      </div>
+    </div>
+    <div class="screen-tools">
+      <button id="show-zones" type="button" aria-pressed="false">Show tap zones</button>
+    </div>
+    <p class="hint">Click anywhere on the screen to tap it — the same zones as the real touchscreen. Or use the buttons / arrow keys below. The mirror fills in as Bruce redraws, so press anything if it looks stale. Images (e.g. the boot cat) show as an outlined box.</p>
+  </div>
+
+  <details>
+    <summary>Serial console</summary>
+    <p class="hint">Any command you send here (other than <code>nav</code>/<code>option</code>) makes Bruce quit the running app and return to the main menu.</p>
+    <div id="log"></div>
+    <form id="cmd"><input id="line" placeholder="help · settings · loader list · wifi on" autocomplete="off" spellcheck="false"><button>Send</button></form>
+  </details>
+</main>
+
+<script>
+const canvas = document.getElementById("screen");
+const ctx = canvas.getContext("2d");
+const logEl = document.getElementById("log");
+
+// --- drawing: mirrors Bruce's tftLogger packets (include/tftLogger.h, 1.16.1) ---
+const FIELDS = {
+  0: ["fg"], 1: ["x","y","w","h","fg"], 2: ["x","y","w","h","fg"],
+  3: ["x","y","w","h","r","fg"], 4: ["x","y","w","h","r","fg"],
+  5: ["x","y","r","fg"], 6: ["x","y","r","fg"],
+  7: ["x","y","x2","y2","x3","y3","fg"], 8: ["x","y","x2","y2","x3","y3","fg"],
+  9: ["x","y","rx","ry","fg"], 10: ["x","y","rx","ry","fg"],
+  11: ["x","y","x1","y1","fg"], 12: ["x","y","r","ir","sa","ea","fg","bg"],
+  13: ["x","y","bx","by","wd","fg","bg"],
+  14: ["x","y","size","fg","bg","txt"], 15: ["x","y","size","fg","bg","txt"],
+  16: ["x","y","size","fg","bg","txt"], 17: ["x","y","size","fg","bg","txt"],
+  18: ["x","y","center","ms","fs","file"], 19: ["x","y","fg"],
+  20: ["x","y","h","fg"], 21: ["x","y","w","fg"], 99: ["w","h","rot"],
+};
+const BYTE_FIELDS = new Set(["rot", "fs"]);
+const COLOR_FIELDS = new Set(["fg", "bg"]);
+
+function parse(p) {
+  const fn = p[2], o = { fn }; let i = 3;
+  for (const k of FIELDS[fn] || []) {
+    if (k === "txt" || k === "file") { o[k] = new TextDecoder().decode(p.slice(i)); i = p.length; }
+    else if (BYTE_FIELDS.has(k)) o[k] = p[i++];
+    else { let v = (p[i] << 8) | p[i + 1]; i += 2;
+           if (!COLOR_FIELDS.has(k) && v > 32767) v -= 65536; o[k] = v; }
+  }
+  return o;
+}
+const css = c => `rgb(${((c >> 11) & 31) * 255 / 31 | 0},${((c >> 5) & 63) * 255 / 63 | 0},${(c & 31) * 255 / 31 | 0})`;
+
+function roundRect(o) {
+  const r = Math.min(o.r, o.w / 2, o.h / 2);
+  ctx.beginPath(); ctx.roundRect(o.x, o.y, o.w, o.h, r);
+}
+function text(o) {
+  // Bruce's GLCD font: 6x8 px cells, scaled by text size.
+  const s = Math.max(1, o.size), cw = 6 * s, ch = 8 * s;
+  const t = o.txt.replace(/[\r\n]/g, "");
+  let x = o.x;
+  if (o.fn === 14) x -= (t.length * cw) / 2;
+  if (o.fn === 15) x -= t.length * cw;
+  if (o.bg !== o.fg) { ctx.fillStyle = css(o.bg); ctx.fillRect(x, o.y, t.length * cw, ch); }
+  ctx.fillStyle = css(o.fg);
+  ctx.font = `bold ${8.5 * s}px Menlo, monospace`;
+  ctx.textBaseline = "top"; ctx.textAlign = "center";
+  for (let i = 0; i < t.length; i++) ctx.fillText(t[i], x + i * cw + cw / 2, o.y);
+}
+
+function draw(p) {
+  const o = parse(p);
+  ctx.lineWidth = 1;
+  switch (o.fn) {
+    case 99: if (canvas.width !== o.w || canvas.height !== o.h) { canvas.width = o.w; canvas.height = o.h; } break;
+    case 0: ctx.fillStyle = css(o.fg); ctx.fillRect(0, 0, canvas.width, canvas.height); break;
+    case 1: ctx.strokeStyle = css(o.fg); ctx.strokeRect(o.x + .5, o.y + .5, o.w - 1, o.h - 1); break;
+    case 2: ctx.fillStyle = css(o.fg); ctx.fillRect(o.x, o.y, o.w, o.h); break;
+    case 3: ctx.strokeStyle = css(o.fg); roundRect(o); ctx.stroke(); break;
+    case 4: ctx.fillStyle = css(o.fg); roundRect(o); ctx.fill(); break;
+    case 5: ctx.strokeStyle = css(o.fg); ctx.beginPath(); ctx.arc(o.x, o.y, o.r, 0, 7); ctx.stroke(); break;
+    case 6: ctx.fillStyle = css(o.fg); ctx.beginPath(); ctx.arc(o.x, o.y, o.r + .5, 0, 7); ctx.fill(); break;
+    case 7: case 8:
+      ctx.beginPath(); ctx.moveTo(o.x, o.y); ctx.lineTo(o.x2, o.y2); ctx.lineTo(o.x3, o.y3); ctx.closePath();
+      if (o.fn === 8) { ctx.fillStyle = css(o.fg); ctx.fill(); } else { ctx.strokeStyle = css(o.fg); ctx.stroke(); }
+      break;
+    case 9: case 10:
+      ctx.beginPath(); ctx.ellipse(o.x, o.y, Math.abs(o.rx), Math.abs(o.ry), 0, 0, 7);
+      if (o.fn === 10) { ctx.fillStyle = css(o.fg); ctx.fill(); } else { ctx.strokeStyle = css(o.fg); ctx.stroke(); }
+      break;
+    case 11: ctx.strokeStyle = css(o.fg); ctx.beginPath(); ctx.moveTo(o.x + .5, o.y + .5); ctx.lineTo(o.x1 + .5, o.y1 + .5); ctx.stroke(); break;
+    case 12: { // TFT_eSPI arcs: 0° at 6 o'clock, clockwise
+      ctx.strokeStyle = css(o.fg); ctx.lineWidth = Math.max(1, o.r - o.ir);
+      ctx.beginPath(); ctx.arc(o.x, o.y, (o.r + o.ir) / 2, (o.sa + 90) * Math.PI / 180, (o.ea + 90) * Math.PI / 180); ctx.stroke();
+      break; }
+    case 13: ctx.strokeStyle = css(o.fg); ctx.lineWidth = o.wd || 1; ctx.beginPath(); ctx.moveTo(o.x, o.y); ctx.lineTo(o.bx, o.by); ctx.stroke(); break;
+    case 14: case 15: case 16: case 17: text(o); break;
+    case 18: { // image files live on the device; outline where they'd be
+      ctx.strokeStyle = "#555"; ctx.setLineDash([3, 3]);
+      const w = 64, h = 48, x = o.center ? (canvas.width - w) / 2 + o.x : o.x, y = o.center ? (canvas.height - h) / 2 + o.y : o.y;
+      ctx.strokeRect(x + .5, y + .5, w, h); ctx.setLineDash([]); break; }
+    case 19: ctx.fillStyle = css(o.fg); ctx.fillRect(o.x, o.y, 1, 1); break;
+    case 20: ctx.fillStyle = css(o.fg); ctx.fillRect(o.x, o.y, 1, o.h); break;
+    case 21: ctx.fillStyle = css(o.fg); ctx.fillRect(o.x, o.y, o.w, 1); break;
+  }
+}
+
+function placeholder(msg) {
+  ctx.fillStyle = "#000"; ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = "#777"; ctx.font = "13px -apple-system, sans-serif";
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.fillText(msg, canvas.width / 2, canvas.height / 2);
+}
+
+// --- log ---
+function log(s) {
+  const atBottom = logEl.scrollHeight - logEl.scrollTop - logEl.clientHeight < 30;
+  logEl.textContent += s;
+  if (logEl.textContent.length > 60000) logEl.textContent = logEl.textContent.slice(-40000);
+  if (atBottom) logEl.scrollTop = logEl.scrollHeight;
+}
+
+// --- status ---
+const dot = document.getElementById("dot"), statusText = document.getElementById("status-text");
+let drawnSinceConnect = false;
+function setStatus(s) {
+  statusText.textContent = s;
+  dot.classList.toggle("ok", s === "connected");
+  if (s !== "connected") placeholder(s);
+  else if (!drawnSinceConnect) placeholder("connected · press a button to draw the screen");
+}
+
+// --- events ---
+const es = new EventSource("/events");
+es.onmessage = e => {
+  const ev = JSON.parse(e.data);
+  if (ev.t === "pk") {
+    drawnSinceConnect = true;
+    draw(Uint8Array.from(atob(ev.v), c => c.charCodeAt(0)));
+  } else if (ev.t === "text") log(ev.v);
+  else if (ev.t === "status") { if (ev.v !== "connected") drawnSinceConnect = false; setStatus(ev.v); }
+  else if (ev.t === "reset") drawnSinceConnect = false;
+};
+es.onerror = () => setStatus("lost connection to bruce_remote.py");
+
+// --- input ---
+function flash(el) { if (!el) return; el.classList.add("flash"); setTimeout(() => el.classList.remove("flash"), 120); }
+async function nav(button) {
+  flash(document.querySelector(`.controls [data-nav="${button}"]`));
+  await fetch("/nav", { method: "POST", body: JSON.stringify({ button }) });
+}
+document.querySelectorAll(".controls [data-nav]").forEach(b => b.addEventListener("click", () => nav(b.dataset.nav)));
+const KEYS = { ArrowUp: "up", ArrowDown: "down", ArrowLeft: "prev", ArrowRight: "next", Enter: "sel", Escape: "esc", Backspace: "esc" };
+
+// --- tap the screen: same 3x3 zones Bruce maps touches to (core/utils.cpp touchHeatMap) ---
+const zones = document.getElementById("zones"), zoneCells = [...zones.children];
+function zoneAt(col, row) {
+  // columns: 0=left, 1=mid, 2=right ; rows: 0=top, 1=mid, 2=bottom
+  if (col === 2) return "next";
+  if (col === 0) return row === 0 ? "esc" : "prev";
+  return row === 0 ? "up" : row === 1 ? "sel" : "down"; // middle column
+}
+canvas.addEventListener("click", e => {
+  const r = canvas.getBoundingClientRect();
+  const col = Math.min(2, Math.floor(((e.clientX - r.left) / r.width) * 3));
+  const row = Math.min(2, Math.floor(((e.clientY - r.top) / r.height) * 3));
+  flash(zoneCells[row * 3 + col]);
+  nav(zoneAt(col, row));
+});
+const zonesBtn = document.getElementById("show-zones");
+function setZones(on) {
+  zones.classList.toggle("show", on);
+  zonesBtn.setAttribute("aria-pressed", on);
+  zonesBtn.textContent = on ? "Hide tap zones" : "Show tap zones";
+  try { localStorage.setItem("showZones", on ? "1" : "0"); } catch (e) {}
+}
+zonesBtn.addEventListener("click", () => setZones(zonesBtn.getAttribute("aria-pressed") !== "true"));
+try { if (localStorage.getItem("showZones") === "1") setZones(true); } catch (e) {}
+document.addEventListener("keydown", e => {
+  if (e.target.tagName === "INPUT" || e.metaKey || e.ctrlKey) return;
+  const b = KEYS[e.key]; if (b) { e.preventDefault(); nav(b); }
+});
+document.getElementById("cmd").addEventListener("submit", async e => {
+  e.preventDefault();
+  const input = document.getElementById("line"), line = input.value.trim();
+  if (!line) return;
+  input.value = "";
+  await fetch("/cmd", { method: "POST", body: JSON.stringify({ line }) });
+});
+placeholder("connecting…");
+</script>
+</body>
+</html>

@@ -1,0 +1,29 @@
+diff --git a/src/main.cpp b/src/main.cpp
+index 162127d..2cde63a 100644
+--- a/src/main.cpp
++++ b/src/main.cpp
+@@ -269,6 +269,10 @@ void begin_tft() {
+ #define BOOT_TAGLINE "PREDATORY FIRMWARE"
+ #endif
+ 
++#ifdef CYBER_UNICORN_BOOT
++#include "cyber_apps/boot/unicorn_boot.h"
++#endif
++
+ void boot_screen() {
+     tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
+     tft.setTextSize(FM);
+@@ -287,6 +291,13 @@ void boot_screen() {
+  **  Draw boot screen
+  *********************************************************************/
+ void boot_screen_anim() {
++#ifdef CYBER_UNICORN_BOOT
++    // cyberpunkunicorn OS boot scene (apps/boot); falls back to stock if RAM is short.
++    if (unicornBootScene(7000)) {
++        tft.fillScreen(bruceConfig.bgColor);
++        return;
++    }
++#endif
+     boot_screen();
+     int i = millis();
+     // checks for boot.jpg in SD and LittleFS for customization

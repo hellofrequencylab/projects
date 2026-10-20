@@ -1,0 +1,52 @@
+diff --git a/src/core/main_menu.cpp b/src/core/main_menu.cpp
+index 55a5878..f455145 100644
+--- a/src/core/main_menu.cpp
++++ b/src/core/main_menu.cpp
+@@ -5,6 +5,7 @@
+ 
+ MainMenu::MainMenu() {
+     _menuItems = {
++        CYBER_APP_MENU_ITEMS
+         &wifiMenu,
+         &bleMenu,
+         &rfMenu,
+diff --git a/src/core/main_menu.h b/src/core/main_menu.h
+index 705e967..af86096 100644
+--- a/src/core/main_menu.h
++++ b/src/core/main_menu.h
+@@ -19,6 +19,7 @@
+ #include "menu_items/RFMenu.h"
+ #include "menu_items/ScriptsMenu.h"
+ #include "menu_items/WifiMenu.h"
++#include "cyber_apps/apps.h"
+ class MainMenu {
+ public:
+     FileMenu fileMenu;
+@@ -35,6 +36,7 @@ public:
+     RFMenu rfMenu;
+     ScriptsMenu scriptsMenu;
+     WifiMenu wifiMenu;
++    CYBER_APP_MEMBERS
+ #if !defined(LITE_VERSION)
+     LoRaMenu loraMenu;
+     EthernetMenu ethernetMenu;
+diff --git a/src/core/serial_commands/cli.cpp b/src/core/serial_commands/cli.cpp
+index 83bc1e8..d50add3 100644
+--- a/src/core/serial_commands/cli.cpp
++++ b/src/core/serial_commands/cli.cpp
+@@ -14,6 +14,7 @@
+ #include "storage_commands.h"
+ #include "util_commands.h"
+ #include "wifi_commands.h"
++#include "cyber_apps/apps.h"
+ #include <globals.h>
+ 
+ void cliErrorCallback(cmd_error *e) {
+@@ -44,6 +45,7 @@ void SerialCli::setup() {
+     createStorageCommands(&_cli);
+     createUtilCommands(&_cli);
+     createWifiCommands(&_cli);
++    cyberAppsCreateCommands(&_cli);
+ 
+ #ifdef USB_as_HID
+     createBadUsbCommands(&_cli);

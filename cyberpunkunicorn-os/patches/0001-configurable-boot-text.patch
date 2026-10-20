@@ -1,0 +1,31 @@
+diff --git a/src/main.cpp b/src/main.cpp
+index d45c091..162127d 100644
+--- a/src/main.cpp
++++ b/src/main.cpp
+@@ -261,16 +261,24 @@ void begin_tft() {
+  **  Function: boot_screen
+  **  Draw boot screen
+  *********************************************************************/
++// Boot screen text, overridable at build time (nm-rf-hat/boot.conf).
++#ifndef BOOT_TITLE
++#define BOOT_TITLE "Bruce"
++#endif
++#ifndef BOOT_TAGLINE
++#define BOOT_TAGLINE "PREDATORY FIRMWARE"
++#endif
++
+ void boot_screen() {
+     tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
+     tft.setTextSize(FM);
+     tft.drawPixel(0, 0, bruceConfig.bgColor);
+-    tft.drawCentreString("Bruce", tftWidth / 2, 10, 1);
++    tft.drawCentreString(BOOT_TITLE, tftWidth / 2, 10, 1);
+     tft.setTextSize(FP);
+     tft.drawCentreString(BRUCE_VERSION, tftWidth / 2, 25, 1);
+     tft.setTextSize(FM);
+     tft.drawCentreString(
+-        "PREDATORY FIRMWARE", tftWidth / 2, tftHeight + 2, 1
++        BOOT_TAGLINE, tftWidth / 2, tftHeight + 2, 1
+     ); // will draw outside the screen on non touch devices
+ }
+ 

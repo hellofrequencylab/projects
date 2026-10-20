@@ -1,0 +1,201 @@
+diff --git a/src/core/display.cpp b/src/core/display.cpp
+index cffde57..4eb440e 100644
+--- a/src/core/display.cpp
++++ b/src/core/display.cpp
+@@ -1,4 +1,5 @@
+ #include "display.h"
++#include "cyber_apps/ui/rainbow.h" // CyberUnicorn 5000 skin (patch 0008)
+ #include "core/wifi/webInterface.h" // for server
+ #include "core/wifi/wg.h"           //for isConnectedWireguard to print wireguard lock
+ #include "mykeyboard.h"
+@@ -66,11 +67,13 @@ void displayScrollingText(const String &text, Opt_Coord &coord, bool highlight)
+ ***************************************************************************************/
+ void TouchFooter(uint16_t color) {
+ #if defined(HAS_TOUCH)
+-    tft.drawRoundRect(5, tftHeight + 2, tftWidth - 10, 43, 5, color);
+-    tft.setTextColor(color);
++    cyberRainbowFrame(5, tftHeight + 2, tftWidth - 10, 43, cyberPhase());
+     tft.setTextSize(FM);
++    tft.setTextColor(cyberHue(300));
+     tft.drawCentreString("PREV", tftWidth / 6, tftHeight + 4, 1);
++    tft.setTextColor(cyberHue(180));
+     tft.drawCentreString("SEL", tftWidth / 2, tftHeight + 4, 1);
++    tft.setTextColor(cyberHue(60));
+     tft.drawCentreString("NEXT", 5 * tftWidth / 6, tftHeight + 4, 1);
+ #endif
+ }
+@@ -196,6 +199,7 @@ void displayRedStripe(const String &text, uint16_t fgcolor, uint16_t bgcolor) {
+ 
+     tft.drawPixel(0, 0, 0);
+     tft.fillRoundRect(10, tftHeight / 2 - boxHeight / 2, tftWidth - 20, boxHeight, 7, bgcolor);
++    cyberRainbowFrame(10, tftHeight / 2 - boxHeight / 2, tftWidth - 20, boxHeight, cyberPhase());
+     tft.setTextColor(fgcolor, bgcolor);
+     tft.setTextSize(size);
+ 
+@@ -751,10 +755,10 @@ void progressHandler(int progress, size_t total, const String &message) {
+     int barWidth = map(progress, 0, total, 0, tftWidth - 40);
+     if (barWidth < 3) {
+         tft.fillRect(6, 27, tftWidth - 12, tftHeight - 33, bruceConfig.bgColor);
+-        tft.drawRect(18, tftHeight - 47, tftWidth - 36, 17, bruceConfig.priColor);
++        cyberRainbowFrame(18, tftHeight - 47, tftWidth - 36, 17, 0);
+         displayRedStripe(message, TFT_WHITE, bruceConfig.priColor);
+     }
+-    tft.fillRect(20, tftHeight - 45, barWidth, 13, bruceConfig.priColor);
++    cyberRainbowFill(20, tftHeight - 45, barWidth, 13, 0);
+ }
+ 
+ /***************************************************************************************
+@@ -780,13 +784,12 @@ Opt_Coord drawOptions(
+         tft.fillRoundRect(
+             tftWidth * 0.10, optionsTopY, tftWidth * 0.8, (FM * 8 + 4) * menuSize + 10, 5, bgcolor
+         );
+-        tft.drawRoundRect(
++        cyberRainbowFrame(
+             tftWidth * 0.10,
+             tftHeight / 2 - menuSize * (FM * 8 + 4) / 2 - 5,
+             tftWidth * 0.8,
+             (FM * 8 + 4) * menuSize + 10,
+-            5,
+-            fgcolor
++            0
+         );
+     }
+     tft.setTextColor(fgcolor, bgcolor);
+@@ -817,7 +820,12 @@ Opt_Coord drawOptions(
+             // Draw selection highlight bar
+             if (i == index) {
+                 tft.fillRoundRect(
+-                    tftWidth * 0.10 + 2, cursorY + 2, tftWidth * 0.8 - 4, FM * LH + 2, 3, bruceConfig.priColor
++                    tftWidth * 0.10 + 2,
++                    cursorY + 2,
++                    tftWidth * 0.8 - 4,
++                    FM * LH + 2,
++                    3,
++                    cyberItemColor(index, options.size())
+                 );
+             }
+ 
+@@ -838,7 +846,7 @@ Opt_Coord drawOptions(
+             tft.setCursor(tftWidth * 0.10 + 5, tft.getCursorY() + 4);
+ 
+             // Draw text with appropriate colors for selection
+-            if (i == index) { tft.setTextColor(bgcolor, bruceConfig.priColor); }
++            if (i == index) { tft.setTextColor(TFT_BLACK, cyberItemColor(index, options.size())); }
+             tft.println(text.substring(0, (tftWidth * 0.8 - 10) / (LW * FM) - 1));
+ 
+             // Reset text color for next item
+@@ -890,14 +898,14 @@ void drawSubmenu(int index, std::vector<Option> &options, const char *title) {
+     // Selected item
+     int selectedTextSize = options[index].label.length() <= tftWidth / (LW * FG) - 1 ? FG : FM;
+     tft.setTextSize(selectedTextSize);
+-    tft.setTextColor(options[index].enabled ? bruceConfig.priColor : TFT_DARKGREY);
++    tft.setTextColor(options[index].enabled ? cyberItemColor(index, menuSize) : TFT_DARKGREY);
+     tft.fillRect(6, middle - FG * LH / 2 - 1, tftWidth - 12, FG * LH + 5, bruceConfig.bgColor);
+     tft.drawCentreString(options[index].label, tftWidth / 2, middle - selectedTextSize * LH / 2, SMOOTH_FONT);
+-    tft.drawFastHLine(
++    cyberRainbowHLine(
+         tftWidth / 2 - strlen(options[index].label.c_str()) * selectedTextSize * LW / 2,
+         middle + selectedTextSize * LH / 2 + 1,
+         strlen(options[index].label.c_str()) * selectedTextSize * LW,
+-        bruceConfig.priColor
++        cyberPhase()
+     );
+     // Next Item
+     int thirdIndex = index + 1 < menuSize ? index + 1 : 0;
+@@ -908,7 +916,7 @@ void drawSubmenu(int index, std::vector<Option> &options, const char *title) {
+     tft.drawCentreString(thirdOption, tftWidth / 2, middle_down, SMOOTH_FONT);
+ 
+     tft.fillRect(tftWidth - 5, 0, 5, tftHeight, bruceConfig.bgColor);
+-    tft.fillRect(tftWidth - 5, index * tftHeight / menuSize, 5, tftHeight / menuSize, bruceConfig.priColor);
++    tft.fillRect(tftWidth - 5, index * tftHeight / menuSize, 5, tftHeight / menuSize, cyberItemColor(index, menuSize));
+ 
+ #if defined(HAS_TOUCH)
+     tft.drawCentreString("\\/", tftWidth / 2, middle_down + (FM * LH + 6), 1);
+@@ -923,8 +931,8 @@ void drawStatusBar() {
+     if (bat > 0) drawBatteryStatus(bat);
+ 
+     if (bruceConfig.theme.border) {
+-        tft.drawRoundRect(5, 5, tftWidth - 10, tftHeight - 10, 5, bruceConfig.priColor);
+-        tft.drawLine(5, 25, tftWidth - 6, 25, bruceConfig.priColor);
++        cyberRainbowFrame(5, 5, tftWidth - 10, tftHeight - 10, cyberPhase());
++        cyberRainbowHLine(5, 25, tftWidth - 10, cyberPhase() + 180);
+     }
+ 
+     if (clock_set) {
+@@ -938,7 +946,11 @@ void drawStatusBar() {
+         tft.print(timeStr);
+     } else {
+         setTftDisplay(12, 12, bruceConfig.priColor, 1, bruceConfig.bgColor);
+-        tft.print(String(OS_NAME) + " " + OS_VERSION);
++        int nameW = cyberRainbowText(OS_NAME, 12, 12, cyberPhase(), bruceConfig.bgColor);
++        tft.setTextColor(TFT_WHITE, bruceConfig.bgColor);
++        tft.drawString("TM", 12 + nameW + 1, 9, 1);
++        tft.setTextColor(TFT_DARKGREY, bruceConfig.bgColor);
++        tft.drawString(OS_VERSION, 12 + nameW + 16, 12, 1);
+     }
+ 
+     int iconCount = 0;
+@@ -1037,8 +1049,9 @@ void printTitle(const String &title) {
+     }
+ 
+     tft.setTextSize(titleSize);
+-    tft.setCursor((tftWidth - (t.length() * titleSize * LW)) / 2, BORDER_PAD_Y);
+-    tft.println(t);
++    cyberRainbowText(t, (tftWidth - (t.length() * titleSize * LW)) / 2, BORDER_PAD_Y, 0, bruceConfig.bgColor);
++    tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
++    tft.setCursor(0, BORDER_PAD_Y + titleSize * LH); // where println() used to leave it
+ 
+     tft.setTextSize(FP);
+ }
+@@ -1116,7 +1129,7 @@ Opt_Coord listFiles(int index, std::vector<FileList> fileList) {
+     tft.drawPixel(0, 0, bruceConfig.bgColor);
+     if (index == 0) {
+         tft.fillScreen(bruceConfig.bgColor);
+-        tft.drawRoundRect(5, 5, tftWidth - 10, tftHeight - 10, 5, bruceConfig.priColor);
++        cyberRainbowFrame(5, 5, tftWidth - 10, tftHeight - 10, 0);
+     }
+     tft.setCursor(10, 10);
+     tft.setTextSize(FM);
+diff --git a/src/core/main_menu.cpp b/src/core/main_menu.cpp
+index f455145..0f6b5cb 100644
+--- a/src/core/main_menu.cpp
++++ b/src/core/main_menu.cpp
+@@ -1,6 +1,7 @@
+ #include "main_menu.h"
+ #include "display.h"
+ #include "utils.h"
++#include "cyber_apps/ui/rainbow.h"
+ #include <globals.h>
+ 
+ MainMenu::MainMenu() {
+@@ -54,9 +55,15 @@ void MainMenu::begin(void) {
+                      drawMainBorder(false);
+ 
+                      MenuItemInterface *obj = static_cast<MenuItemInterface *>(menuItem);
++                     // CyberUnicorn skin: each app draws its icon in its own neon colour.
++                     uint16_t savedColor = bruceConfig.priColor;
++                     auto items = mainMenu.getItems();
++                     for (size_t k = 0; k < items.size(); k++)
++                         if (items[k] == obj) bruceConfig.priColor = cyberItemColor(k, items.size());
+                      float scale = float((float)tftWidth / (float)240);
+                      if (bruceConfigPins.rotation & 0b01) scale = float((float)tftHeight / (float)135);
+                      obj->draw(scale);
++                     bruceConfig.priColor = savedColor;
+ #if defined(HAS_TOUCH)
+                      TouchFooter();
+ #endif
+diff --git a/src/core/theme.h b/src/core/theme.h
+index 2945030..b9aac2e 100644
+--- a/src/core/theme.h
++++ b/src/core/theme.h
+@@ -3,8 +3,8 @@
+ #include "sd_functions.h"
+ #include <ArduinoJson.h>
+ 
+-#define DEFAULT_PRICOLOR 0xA80F
+-#define DEFAULT_SECCOLOR 0xCB76
++#define DEFAULT_PRICOLOR 0xF81F // CyberUnicorn hot pink (was 0xA80F)
++#define DEFAULT_SECCOLOR 0x07FF // CyberUnicorn cyan (was 0xCB76)
+ 
+ struct themeFiles {
+     String wifi = "";
