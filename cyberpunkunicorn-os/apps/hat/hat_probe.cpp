@@ -24,7 +24,34 @@ bool isKnownCcVersion(uint8_t v) {
     return v == 0x04 || v == 0x07 || v == 0x08 || v == 0x14 || v == 0x17 || v == 0x18;
 }
 
+// A chip left mid-byte (e.g. by the SPI probe toggling 27/22 under it) can hold SDA
+// low, and then nothing on the bus answers until power-off. Standard recovery: clock
+// SCL up to 9 times until SDA is released, then a STOP. Only acts if SDA is held low.
+void recoverI2C() {
+    int sda = bruceConfigPins.i2c_bus.sda, scl = bruceConfigPins.i2c_bus.scl;
+    if (sda < 0 || scl < 0) return;
+    pinMode(sda, INPUT_PULLUP);
+    pinMode(scl, INPUT_PULLUP);
+    delayMicroseconds(10);
+    if (digitalRead(sda)) return;
+    pinMode(scl, OUTPUT_OPEN_DRAIN);
+    for (int i = 0; i < 9 && !digitalRead(sda); i++) {
+        digitalWrite(scl, LOW);
+        delayMicroseconds(5);
+        digitalWrite(scl, HIGH);
+        delayMicroseconds(5);
+    }
+    pinMode(sda, OUTPUT_OPEN_DRAIN); // STOP: SDA low -> high while SCL is high
+    digitalWrite(sda, LOW);
+    delayMicroseconds(5);
+    digitalWrite(sda, HIGH);
+    delayMicroseconds(5);
+    pinMode(sda, INPUT);
+    pinMode(scl, INPUT);
+}
+
 void probeI2C(HatProbeResult &r) {
+    recoverI2C();
     TwoWire *wire = acquireI2CBus();
     for (uint8_t addr = 0x08; addr < 0x78; addr++) {
         wire->beginTransmission(addr);
@@ -170,6 +197,14 @@ static bool haveLast = false;
 HatProbeResult probeHat() {
     HatProbeResult r;
     probeI2C(r);
+    if (!r.pn532) {
+        // Ask the I2C bus once more before driving 22/27 as SPI: a PN532 that was
+        // asleep answers the second time, and SPI traffic under a half-awake one
+        // can wedge it until the next power cycle.
+        delay(20);
+        r.i2cOther.clear();
+        probeI2C(r);
+    }
     // The SPI radios sit on the same two pins as I2C. If the PN532 answered,
     // driving those pins as SPI would fight it, so stop here.
     if (!r.pn532) probeSPI(r);
