@@ -26,6 +26,9 @@
 
 namespace remote {
 
+// Protocol version, sent in the boot hello, system.status and system.caps.
+constexpr int PROTO_VERSION = 1;
+
 struct Request {
     int id = 0;
     String cmd;
@@ -63,7 +66,18 @@ bool bleSetEnabled(bool on); // false if refused (e.g. not enough free heap)
 int bleConnected();          // connected phones
 bool bleAtBoot();
 void setBleAtBoot(bool on);
-void boot(); // called once at the end of setup()
+void boot(); // called once at the end of setup(); emits @evt hello
+
+// A computer is talking to the board over USB: it sent an rpc line in the last
+// USB_HOST_TIMEOUT_MS. The website's device page sends system.status every ~10 s
+// while it is open, so this goes false soon after the page closes.
+constexpr uint32_t USB_HOST_TIMEOUT_MS = 30000;
+bool usbHostActive();
+
+// Epoch seconds from the clock a computer set with system.time, or 0 if none
+// has this boot. Bruce's own clock starts at a made-up date, so it can't be used
+// to sign anything.
+uint32_t trustedEpoch();
 
 struct LogEntry {
     uint32_t ms;

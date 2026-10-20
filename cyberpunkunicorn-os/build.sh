@@ -71,10 +71,17 @@ cp -R apps .bruce/src/cyber_apps
 # name/version go in OS_NAME/OS_VERSION (patch 0005).
 sed -i '' "s/-DBRUCE_VERSION='\"dev\"'/-DBRUCE_VERSION='\"$BRUCE_TAG\"'/" .bruce/platformio.ini
 
+# The commit this build came from, reported by system.status and the boot hello.
+# "-dirty" when apps/, patches/ or this script have uncommitted changes.
+FW_COMMIT=$(git rev-parse --short=7 HEAD 2>/dev/null || echo unknown)
+if [[ "$FW_COMMIT" != unknown ]] && ! git diff --quiet HEAD -- apps patches build.sh boot.conf 2>/dev/null; then
+  FW_COMMIT+="-dirty"
+fi
+
 # Bruce's patch.py shells out to a bare `pio`; without this it half-patches
 # libnet80211.a (renames it to .old) and the link fails.
 export PATH="$PWD/.venv/bin:$PATH"
-export PLATFORMIO_BUILD_FLAGS="-DOS_NAME='\"$OS_NAME\"' -DOS_VERSION='\"$OS_VERSION\"' -DBOOT_TITLE='\"$BOOT_TITLE\"' -DBOOT_TAGLINE='\"$BOOT_TAGLINE\"'$extra_flags"
+export PLATFORMIO_BUILD_FLAGS="-DOS_NAME='\"$OS_NAME\"' -DOS_VERSION='\"$OS_VERSION\"' -DFW_COMMIT='\"$FW_COMMIT\"' -DBOOT_TITLE='\"$BOOT_TITLE\"' -DBOOT_TAGLINE='\"$BOOT_TAGLINE\"'$extra_flags"
 # One build at a time per machine: Bruce's patch.py edits libnet80211.a in the
 # shared ~/.platformio cache, so parallel builds (e.g. several worktrees) corrupt it.
 LOCK="$HOME/.platformio/.cyberunicorn-build.lock" # next to the shared cache it protects
