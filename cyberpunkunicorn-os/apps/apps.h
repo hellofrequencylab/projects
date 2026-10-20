@@ -5,22 +5,25 @@
 #pragma once
 
 #include "frequency/FrequencyMenu.h"
-#include "hat/HatMenu.h"
 #include "lightshow/LightShowMenu.h"
+#include "sensors/SensorsMenu.h"
+#include "hat/HatMenu.h"
 #include "remote/RemoteMenu.h"
 
 // Members of MainMenu (one instance per app).
-#define CYBER_APP_MEMBERS                                                                         \
-    FrequencyMenu frequencyMenu;                                                                  \
-    HatMenu hatMenu;                                                                              \
-    LightShowMenu lightShowMenu;                                                                  \
+#define CYBER_APP_MEMBERS \
+    FrequencyMenu frequencyMenu; \
+    LightShowMenu lightShowMenu; \
+    SensorsMenu sensorsMenu; \
+    HatMenu hatMenu; \
     RemoteMenu remoteMenu;
 
 // Pointers listed first in the main menu, in this order.
-#define CYBER_APP_MENU_ITEMS &frequencyMenu, &lightShowMenu, &hatMenu, &remoteMenu,
+#define CYBER_APP_MENU_ITEMS &frequencyMenu, &lightShowMenu, &sensorsMenu, &hatMenu, &remoteMenu,
 
 inline void cyberAppsCreateCommands(SimpleCLI *cli) {
-    createHatCommand(cli);
     createFrequencyCommand(cli);
+    createSensorsCommand(cli);
+    createHatCommand(cli);
     createRemoteCommand(cli);
 }
