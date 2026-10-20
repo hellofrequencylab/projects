@@ -185,7 +185,14 @@ bool appReadyNow(const String &menuName) {
 
 void boot() {
     load();
-    rescan();
+    // Right after power-up the hat module can still be waking (a PN532 on DIP 3 was
+    // missed at boot but found by a later probe), so give it two more chances.
+    // Costs about 0.8 s at boot only when no hat module answers.
+    const uint32_t hatParts = (1u << HW_PN532) | (1u << HW_CC1101) | (1u << HW_NRF24);
+    for (int attempt = 0; attempt < 3; attempt++) {
+        if (attempt) delay(400);
+        if (!rescan() || (liveMask & hatParts)) break;
+    }
 }
 
 } // namespace hw

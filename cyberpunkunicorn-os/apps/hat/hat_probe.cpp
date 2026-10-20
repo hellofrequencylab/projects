@@ -28,7 +28,14 @@ void probeI2C(HatProbeResult &r) {
     TwoWire *wire = acquireI2CBus();
     for (uint8_t addr = 0x08; addr < 0x78; addr++) {
         wire->beginTransmission(addr);
-        if (wire->endTransmission() != 0) continue;
+        uint8_t err = wire->endTransmission();
+        if (err != 0 && addr == PN532_I2C_ADDR) {
+            // A sleeping PN532 can NACK the address byte that wakes it: ask again.
+            delay(2);
+            wire->beginTransmission(addr);
+            err = wire->endTransmission();
+        }
+        if (err != 0) continue;
         if (addr == PN532_I2C_ADDR) r.pn532 = true;
         else r.i2cOther.push_back(addr);
     }
