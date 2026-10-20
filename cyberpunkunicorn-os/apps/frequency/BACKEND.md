@@ -21,13 +21,13 @@ the link, and frequency-web credits the signed-in member (ledger credit,
 
 | Tag | URL written | Where the URL comes from |
 |---|---|---|
-| Space check-in node | `${SITE_URL}/n/<node uuid>?s=v1.<iat base36>.<tag>` | Space settings → Check-in (copy link). `tag` = base64url(first 16 bytes of HMAC-SHA256(server secret, `node-code:v1:<nodeId>:<iat>`)), so **only the server can mint it** |
-| Event door | `${SITE_URL}/q/<7-char slug>?m=nfc` | the event's door code. The device adds `?m=nfc` if missing. **Never** on `/n/` links |
+| Space check-in node | `${SITE_URL}/n/<node uuid>?s=v1.<iat base36>.<tag>&m=nfc` | Space settings → Check-in (copy link). `tag` = base64url(first 16 bytes of HMAC-SHA256(server secret, `node-code:v1:<nodeId>:<iat>`)), so **only the server can mint it** |
+| Event door | `${SITE_URL}/q/<7-char slug>?m=nfc` | the event's door code. The device adds `?m=nfc` if missing |
 
 - One NDEF URI record per tag, NTAG213/215/216 only. A signed node URL is ~100
   characters, which fits NTAG213's 144 bytes.
 - Checks before writing (warn, never block): http(s), `/n/` + UUID + `s=v1.<base36>.<22 base64url chars>`
-  with no `m=`, or `/q/` + 7-char slug.
+  with no `m=` other than `m=nfc` (added if missing; `/n` reads only `s`), or `/q/` + 7-char slug.
 - Optional **permanent** write-lock (NTAG static + dynamic lock bits), behind
   two confirmations.
 - Log of tags written: `/frequency/written.csv` on LittleFS

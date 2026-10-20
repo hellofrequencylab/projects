@@ -28,7 +28,7 @@ Settings &settings(); // loaded on first use
 // ---- URLs -------------------------------------------------------------------
 enum UrlKind {
     URL_EMPTY,
-    URL_VENUE,  // /n/<node uuid>?s=v1.<iat>.<tag>   Space check-in node
+    URL_VENUE,  // /n/<node uuid>?s=v1.<iat>.<tag>[&m=nfc]  Space check-in node
     URL_EVENT,  // /q/<7-char slug>[?m=nfc]          event door code
     URL_MEMBER, // /c/<token>                         member card (proposed)
     URL_OTHER,
@@ -37,7 +37,7 @@ struct UrlCheck {
     UrlKind kind = URL_EMPTY;
     bool ok = false;     // well formed for its kind
     String problem;      // why not, for the warning screen
-    String fixed;        // url to actually write (e.g. /q/ gets ?m=nfc)
+    String fixed;        // url to actually write (/n/ and /q/ get m=nfc)
     String host;         // "frequencylocal.com"
     String path;         // "/n/<uuid>" (no query: the signature stays off logs)
     String token;        // member token for URL_MEMBER
