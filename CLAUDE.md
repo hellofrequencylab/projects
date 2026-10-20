@@ -9,6 +9,7 @@ over anything here.
 | `flipper/` | [`flipper/CLAUDE.md`](flipper/CLAUDE.md) — Flipper Zero / ufbt. Non-negotiable: the SDK is the source of truth, not your training data. |
 | `aio-board/` | [`aio-board/CLAUDE.md`](aio-board/CLAUDE.md) — AIO Board V1.4. Hardware facts read off the physical board; one radio at a time, no Bluetooth. |
 | `cyberpunkunicorn-os/` | [`cyberpunkunicorn-os/CLAUDE.md`](cyberpunkunicorn-os/CLAUDE.md) — CyberUnicorn 5000, our Bruce-based OS for CYD + NM-RF-HAT. Non-negotiable: never leave edits in `.bruce/`; Bruce changes are patches, our apps live in `apps/`. |
+| `unicorn-os-circuitpython/` | [`unicorn-os-circuitpython/CLAUDE.md`](unicorn-os-circuitpython/CLAUDE.md) — CircuitPython 10.3.1 on Feather ESP32-S3 TFT. Archive of the original launcher; settings live in nvm, never commit `settings.toml`. |
 | a new project | [`_template/CLAUDE.md`](_template/CLAUDE.md), then `README.md` → "Adding a project" |
 
 ## Rules that hold everywhere
