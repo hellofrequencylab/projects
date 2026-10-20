@@ -62,7 +62,7 @@ out (LoRa, Ethernet, FM are already hidden in the menu but still compiled in).
 | Display + touch | — | system | exists |
 | RGB LED | 4/16/17 *(verify)*, disabled in Bruce's CYD build | **LED** (`apps/led`, CLI `led`) | built, driven directly on LEDC; not yet run on the board |
 | Light sensor (LDR) | GPIO34 *(verify)* | **Light** meter (`apps/light`, CLI `light`) | built; not yet run on the board |
-| Speaker | GPIO26 *(verify)*, not enabled in Bruce's CYD build | **Sound** (tones/alerts) | new |
+| Speaker | GPIO26 *(verify)*, not enabled in Bruce's CYD build | **Sound** (`apps/sound`, CLI `tone`) | built; not yet run on the board |
 | microSD | SPI + CS5 | Files (Bruce) | exists; card currently not mounting (fake 2 TB card) |
 | BOOT button | GPIO0 | system | exists |
 | USB serial | — | CLI (Bruce) | exists |
