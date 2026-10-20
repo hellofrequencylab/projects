@@ -36,9 +36,16 @@ Nothing. Every CyberUnicorn branch is merged (11 apps).
 
 ## Board state
 
-The board currently runs a build of `bd5f29b` that the onboard session flashed
-directly (it has the `pins`/`light` bugs fixed in #6). It gets replaced by the
-next coordinator flash of this branch.
+2026-10-20 00:30: the coordinator flashed `9bbf323` (all 11 apps, app.bin 3,776,000 B, 156,160 B free).
+Serial smoke test, all with no crash or reboot:
+- boot, `info`, `hat` (all DIP off: none), `pins` (3 lines, the old crash is gone),
+  `light` (84 %, raw 695, 711 mV: sane), `led` red/green/off, `tone 440 200`, `sensors`.
+- Remote: `system.status`, `apps.list` (11 apps), `hat.probe`, `light.read`, `led.set`,
+  `sensors.read`, `cli.run`, unknown command → `unknown_command`.
+- Bug found: replies lacked the `@rpc ` prefix (ArduinoJson 7 `serializeJson` overwrites
+  the string). Fixed in `def0228`; not yet re-flashed.
+- Not run: `slides`/`weather` (printf crash, fix pending on the ports branch); `frequency`
+  with real NTAG tags; LED colours, speaker and LDR direction by eye/ear.
 
 ## Board retest checklist (after flashing this branch)
 
