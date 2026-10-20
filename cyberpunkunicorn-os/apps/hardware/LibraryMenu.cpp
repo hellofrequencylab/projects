@@ -78,6 +78,21 @@ bool cyberHardwareGate(MenuItemInterface *item) {
     }
 }
 
+bool cyberPartGate(const String &title, uint8_t part) {
+    hw::Part p = hw::Part(part);
+    const hw::PartInfo &pi = hw::info(p);
+    if (!pi.dip) return true;
+    if (!hw::rescan() || hw::liveNow(p) || hw::marked(p)) return true; // busy: don't block
+    uint8_t on = 1u << (pi.dip - 1);
+    for (;;) {
+        int choice = cyberHardwareCard(title, "TURN DIP " + String(pi.dip) + " ON", pi.name, pi.howTo, on, 0x1F & ~on);
+        if (choice == 1) return true;
+        if (choice != 0) return false;
+        displayInfo("Checking hardware...");
+        if (hw::rescan() && hw::liveNow(p)) return true;
+    }
+}
+
 void LibraryMenu::optionsMenu() {
     std::vector<MenuItemInterface *> apps = inactiveApps();
     options = {

@@ -31,5 +31,10 @@ bool cyberAppActive(const String &menuName);
 // card. Returns false if the user backed out.
 bool cyberHardwareGate(MenuItemInterface *item);
 
+// For an app that picks its hat module inside (Spectrum): re-probes and, if `part`
+// (an hw::Part with a DIP switch) isn't answering, shows the DIP switch card.
+// Returns false if the user backed out.
+bool cyberPartGate(const String &title, uint8_t part);
+
 // Serial CLI: `hw`, `hw rescan`, `hw have <part>`, `hw nothave <part>`, `hw forget <part>|all`.
 void createHardwareCommand(SimpleCLI *cli);

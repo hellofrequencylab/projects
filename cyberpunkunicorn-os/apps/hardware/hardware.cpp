@@ -21,6 +21,7 @@ const PartInfo PARTS[HW_PART_COUNT] = {
     {"lora",     "LoRa module",              "SPI LoRa radio on the hat pins",                false, 0},
     {"ethernet", "Ethernet (W5500)",         "SPI W5500 on the hat pins",                     false, 0},
     {"fm",       "FM transmitter (Si4713)",  "I2C Si4713 on the Grove port",                  false, 0},
+    {"mic",      "Microphone (analog)",      "Mic board (MAX4466 / MAX9814) OUT to GPIO35 on the P3 plug, 3.3 V, GND", false, 0},
 };
 
 // Apps that need hardware. Anything not listed is always in the main menu.

@@ -60,6 +60,10 @@ User-tunable values go in `boot.conf` → `-D` macros via `PLATFORMIO_BUILD_FLAG
 - `0016` hardware library: main menu skips apps whose hardware isn't found
   (`cyberAppActive()`), lists `CYBER_APP_MENU_TAIL` (Library) before Config, and
   opens items through `cyberHardwareGate()` (DIP switch card for hat apps)
+- `0017` hardware trim (`TRIM_ABSENT_HARDWARE` → `-DCU_TRIM_ABSENT_HW`): compiles out
+  FM, LoRa and Ethernet menus and the PN532 BLE/UART, Chameleon and Amiibolink RFID
+  options (the CYD + hat have none of them; about 208 KB). build.sh refuses a
+  `STARTUP_APP` of "PN532 BLE"/"PN532 UART" while it is on
 
 (No 0002: the nm-rf-hat cat scene was dropped for the unicorn.) Macros in 0003–0004
 keep their `NM_` prefix from `nm-rf-hat/`; renaming them is churn.
@@ -149,6 +153,15 @@ source published if builds are distributed.
   by Light and Sound (and their remote commands). Bruce's CYD build drives none of them (`RGB_LED=-1`, no
   `BUZZ_PIN`/`HAS_NS4168_SPKR`, no LDR code). Pins are the common CYD schematic,
   **not yet confirmed on this unit**; LED polarity and LDR direction are constants there.
+- `spectrum/` — **Spectrum**: one analyzer screen, band picked from a list then
+  NEXT/PREV: Wi-Fi channels (async scan, each AP spread over ±2 channels), 2.4 GHz
+  nRF24 (126 × 1 MHz RPD, Bruce's noise-address setup; DIP 2), Sub-GHz CC1101 RSSI
+  sweeps (64 steps, 5 ms settle, bands inside 300–348 / 387–464 / 779–928; DIP 1;
+  forces `rfModule=CC1101_SPI` while open and restores it), Audio (256-point FFT of
+  an analog mic on GPIO35 at 8 kHz, auto gain, 60 dB window; part `mic`, marked by
+  hand). Trace + peak hold + a wiper waterfall (no framebuffer). Hat bands go through
+  `cyberPartGate()` (Library's DIP card for one part). No hardware rule: Wi-Fi always
+  works. CLI: `spectrum`. Remote: `spectrum.bands/read/stream` + `spectrum` events.
 - `light/` — **Light**: LDR meter on GPIO34 (ADC1, 0 dB attenuation, 8-sample
   average): big %, raw/mV/min/max, rainbow bar, scrolling history. CLI: `light`.
 - `sound/` — **Sound**: LEDC square wave on GPIO26 (test tone, unicorn jingle,
