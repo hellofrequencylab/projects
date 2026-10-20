@@ -1,0 +1,5 @@
+settings.toml
+.DS_Store
+__pycache__/
+*.uf2
+*.bin
