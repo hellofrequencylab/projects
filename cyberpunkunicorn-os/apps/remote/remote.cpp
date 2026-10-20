@@ -1,5 +1,6 @@
 #include "remote.h"
 
+#include "../hardware/hardware.h"
 #include "../hat/hat_probe.h"
 #include "../lightshow/LightShowMenu.h"
 #include "core/display.h"
@@ -42,7 +43,7 @@ Handler find(const String &name) {
     return nullptr;
 }
 
-// Protocol v1 commands whose app lives on another branch. Until that app registers
+// Protocol v1 commands whose app lives on another branch (or was removed: led.*). Until that app registers
 // a handler they answer not_available (not unknown_command), so the phone can grey
 // them out instead of treating them as a bug.
 const char *const PLANNED[] = {
@@ -215,6 +216,7 @@ void cmdAppsList(Request &r) {
         String name = item->getName();
         a["name"] = name;
         a["hidden"] = std::find(hidden.begin(), hidden.end(), name) != hidden.end();
+        a["library"] = !hw::appActive(name); // waiting in the Library for its hardware
     }
 }
 

@@ -168,7 +168,9 @@ board trusts (`0` = never set this boot).
 ```
 
 Main-menu items in menu order. `hidden` means hidden via Config → Hide apps (and the
-`TRIM_UNUSED_MENUS` defaults FM/LoRa/Ethernet). Hidden items aren't on screen.
+`TRIM_UNUSED_MENUS` defaults FM/LoRa/Ethernet). `library` means the app's hardware
+hasn't been found, so it waits in the Library instead of the main menu (see
+`hardware.list`). Neither kind is on the main screen.
 
 ### `screen.nav` *
 
@@ -205,6 +207,32 @@ Bruce's `serialDevice` for a buffer while the command runs. Limits:
 
 All `HatProbeResult` fields (snake_case) plus `live_count`, `summary`, `advice`.
 `busy` while Light Show runs, since the probe would drive the LED pin. Takes up to ~1 s.
+
+### `hardware.list` *
+
+```json
+{"parts":[{"id":"pn532","name":"NFC reader (PN532)","present":true,"live":true,
+           "detected":true,"marked":false,"auto":true,"how":"Hat DIP 3 ON, ..."}, ...],
+ "apps":[{"name":"Frequency","active":true,"needs_any":["pn532"]},
+         {"name":"Light Show","active":false,"needs_any":["ledpanel"]}, ...]}
+```
+
+The hardware registry (`apps/hardware/hardware.h`). `present` = `detected` (seen by a
+probe at some point; sticky, so flipping the DIP switch doesn't reshuffle the menu) or
+`marked` (the user said they have it; the only way for parts with `"auto":false`) or
+`live` (answered the latest probe). `apps` lists only apps with a hardware rule;
+`active:false` means it is in the Library. Part ids: `pn532 cc1101 nrf24 ir ook433 i2c
+node speaker ledpanel gps lora ethernet fm`.
+
+### `hardware.rescan` *
+
+No args → same reply as `hardware.list`, after a fresh hat probe (~0.4 s, drives pins
+22/27). `busy` while Light Show runs.
+
+### `hardware.mark` *
+
+`{"part":"speaker","have":true}` → same reply as `hardware.list`. `have:false` forgets
+the part (clears both detected and marked).
 
 ### `lightshow.state` *
 
@@ -339,8 +367,7 @@ as agreed for v1:
 
 | cmd | args | data |
 |---|---|---|
-| `led.set` | `{r,g,b}` 0-255 | `{r,g,b}` |
-| `led.mode` | `{mode}`: proposed `"off"`, `"solid"`, `"rainbow"`, `"breathe"` (the LED app's modes) | `{mode}` |
+| `led.set`, `led.mode` | | **Removed 2026-10-20** with the LED app. Both answer `not_available` for good. |
 | `sound.tone` | `{hz, ms}` | `{hz, ms}` (returns once the tone has started) |
 | `light.read` | `{}` | `{raw, percent}` (CYD LDR on GPIO 34) |
 | `sensors.read` | `{}` | `{sensors:[{name, kind, value, unit}]}`, e.g. `{"name":"AHT20","kind":"temperature","value":21.4,"unit":"C"}` |

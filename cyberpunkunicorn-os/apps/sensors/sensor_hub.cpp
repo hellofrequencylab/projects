@@ -1,5 +1,6 @@
 #include "sensor_hub.h"
 
+#include "../hardware/hardware.h"
 #include "../hat/hat_probe.h"
 #include "core/bus_HAL.h"
 #include "core/sd_functions.h"
@@ -57,6 +58,7 @@ void onEspNowRecv(const esp_now_recv_info_t *ri, const uint8_t *data, int len) {
         rxIgnored = rxIgnored + 1;
         return;
     }
+    hw::noteDetected(hw::HW_SENSOR_NODE); // RAM flag only; safe in this callback
     RxItem it;
     memcpy(&it.p, data, sizeof(it.p));
     it.rssi = (ri && ri->rx_ctrl) ? ri->rx_ctrl->rssi : 0;

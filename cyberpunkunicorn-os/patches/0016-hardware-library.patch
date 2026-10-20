@@ -1,0 +1,30 @@
+diff --git a/src/core/main_menu.cpp b/src/core/main_menu.cpp
+index edb1592..9662e38 100644
+--- a/src/core/main_menu.cpp
++++ b/src/core/main_menu.cpp
+@@ -30,6 +30,7 @@ MainMenu::MainMenu() {
+ #endif
+         &clockMenu,
+         &othersMenu,
++        CYBER_APP_MENU_TAIL
+         &configMenu,
+     };
+ 
+@@ -45,11 +46,16 @@ void MainMenu::begin(void) {
+     std::vector<String> l = bruceConfig.disabledMenus;
+     for (int i = 0; i < _totalItems; i++) {
+         String itemName = _menuItems[i]->getName();
++        // CyberUnicorn: apps whose hardware hasn't been found wait in the Library.
++        if (!cyberAppActive(itemName)) continue;
+         if (find(l.begin(), l.end(), itemName) == l.end()) { // If menu item is not disabled
+             options.push_back(
+                 {// selected lambda
+                  itemName,
+-                 [this, i]() { _menuItems[i]->optionsMenu(); },
++                 // CyberUnicorn: hat apps show the DIP switch card if the wrong module is on.
++                 [this, i]() {
++                     if (cyberHardwareGate(_menuItems[i])) _menuItems[i]->optionsMenu();
++                 },
+                  false,                                  // selected = false
+                  [](void *menuItem, bool shouldRender) { // render lambda
+                      if (!shouldRender) return false;
