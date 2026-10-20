@@ -67,7 +67,7 @@ out (LoRa, Ethernet, FM are already hidden in the menu but still compiled in).
 | BOOT button | GPIO0 | system | exists |
 | USB serial | — | CLI (Bruce) | exists |
 | Grove/JST ports on hat & CYD | mostly 22/27 *(verify each)* | **Sensors** (wired) | new |
-| Free GPIO | 35 (in) *(verify)* | **GPIO** (Bruce has `gpio` serial cmds) | add on-screen app |
+| Free GPIO | 22, 27 (hat DIP 1-5 off), 35 (in) *(verify 35 on P3)* | **GPIO** (`apps/gpio`, CLI `pins`; Bruce's `gpio` cmds too) | built; not yet run on the board |
 
 ## External sensors — the platform piece
 
@@ -103,7 +103,7 @@ firmware would be its own project directory.
 1. Project skeleton: copy the build, rename/brand, build, flash, confirm boot.
 2. **Hat** app (module probe) — every other app depends on knowing what's live.
 3. **Frequency** (scan first, then program).
-4. Onboard extras: **LED**, **Light**, **Sound** (verify pins first).
+4. Onboard extras: **LED**, **Light**, **Sound**, **GPIO** — built 2026-10-19, pins still to verify on the board.
 5. **Sensors**: I2C wired first, then ESP-NOW + first sensor-node project.
 6. Trim unused Bruce modules as flash runs out.
 

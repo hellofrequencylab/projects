@@ -9,6 +9,7 @@
 #include "led/LedMenu.h"
 #include "light/LightMenu.h"
 #include "sound/SoundMenu.h"
+#include "gpio/GpioMenu.h"
 
 // Members of MainMenu (one instance per app).
 #define CYBER_APP_MEMBERS                                                                         \
@@ -16,14 +17,16 @@
     LightShowMenu lightShowMenu;                                                                  \
     LedMenu ledMenu;                                                                              \
     LightMenu lightMenu;                                                                          \
-    SoundMenu soundMenu;
+    SoundMenu soundMenu;                                                                          \
+    GpioMenu gpioMenu;
 
 // Pointers listed first in the main menu, in this order.
-#define CYBER_APP_MENU_ITEMS &lightShowMenu, &hatMenu, &ledMenu, &lightMenu, &soundMenu,
+#define CYBER_APP_MENU_ITEMS &lightShowMenu, &hatMenu, &ledMenu, &lightMenu, &soundMenu, &gpioMenu,
 
 inline void cyberAppsCreateCommands(SimpleCLI *cli) {
     createHatCommand(cli);
     createLedCommand(cli);
     createLightCommand(cli);
     createSoundCommand(cli);
+    createPinsCommand(cli);
 }
