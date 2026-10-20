@@ -1,0 +1,310 @@
+{
+  "plugins": [
+    "react",
+    "import"
+  ],
+  "rules": {
+    "react/forbid-elements": [
+      "warn",
+      {
+        "forbid": []
+      }
+    ],
+    "no-restricted-imports": [
+      "warn",
+      {
+        "patterns": [
+          {
+            "group": [
+              "components/device/**",
+              "components/icons/**",
+              "components/rainbow/**",
+              "icons/**",
+              "ui_kits/device/**",
+              "ui_kits/device/apps/**"
+            ],
+            "message": "Import design-system components from 'index.js', not component internals."
+          }
+        ]
+      }
+    ],
+    "no-restricted-syntax": [
+      "warn",
+      {
+        "selector": "Literal[value=/#[0-9a-fA-F]{3,8}\\b/]",
+        "message": "Raw hex color — use a design-system color token via var()."
+      },
+      {
+        "selector": "Literal[value=/\\b\\d+px\\b/]",
+        "message": "Raw px value — use a design-system spacing token via var()."
+      },
+      {
+        "selector": "Literal[value=/font-family\\s*:\\s*(?!['\\\"]?(?:Press Start 2P|VT323))/i]",
+        "message": "Font not provided by the design system. Available: Press Start 2P, VT323."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='AppFrame'] > JSXAttribute > JSXIdentifier[name!=/^(?:title|footer|children|animate|phase|statusLabel|clock|link|background|backdrop|footerColor|key|ref|className|style|children)$/]",
+        "message": "<AppFrame> doesn't accept that prop. Declared props: title, footer, children, animate, phase, statusLabel, clock, link, background, backdrop, footerColor."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='BootScene'] > JSXAttribute > JSXIdentifier[name!=/^(?:title|tagline|duration|finale|loop|scale|onDone|style|key|ref|className|style|children)$/]",
+        "message": "<BootScene> doesn't accept that prop. Declared props: title, tagline, duration, finale, loop, scale, onDone, style."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='DeviceScreen'] > JSXAttribute > JSXIdentifier[name!=/^(?:children|scale|bezel|label|style|key|ref|className|style|children)$/]",
+        "message": "<DeviceScreen> doesn't accept that prop. Declared props: children, scale, bezel, label, style."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='MenuScreen'] > JSXAttribute > JSXIdentifier[name!=/^(?:app|index|count|onPrev|onNext|onSelect|status|clock|animate|key|ref|className|style|children)$/]",
+        "message": "<MenuScreen> doesn't accept that prop. Declared props: app, index, count, onPrev, onNext, onSelect, status, clock, animate."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='OptionItem'] > JSXAttribute > JSXIdentifier[name!=/^(?:label|value|key|ref|className|style|children)$/]",
+        "message": "<OptionItem> doesn't accept that prop. Declared props: label, value."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='PixelIcon'] > JSXAttribute > JSXIdentifier[name!=/^(?:name|cell|animate|frame|tick|background|title|style|key|ref|className|style|children)$/]",
+        "message": "<PixelIcon> doesn't accept that prop. Declared props: name, cell, animate, frame, tick, background, title, style."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='RainbowBar'] > JSXAttribute > JSXIdentifier[name!=/^(?:value|width|height|phase|animate|label|showPercent|style|key|ref|className|style|children)$/]",
+        "message": "<RainbowBar> doesn't accept that prop. Declared props: value, width, height, phase, animate, label, showPercent, style."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='RainbowFrame'] > JSXAttribute > JSXIdentifier[name!=/^(?:children|thickness|phase|animate|radius|padding|style|key|ref|className|style|children)$/]",
+        "message": "<RainbowFrame> doesn't accept that prop. Declared props: children, thickness, phase, animate, radius, padding, style."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='RainbowText'] > JSXAttribute > JSXIdentifier[name!=/^(?:children|phase|size|animate|as|style|key|ref|className|style|children)$/]",
+        "message": "<RainbowText> doesn't accept that prop. Declared props: children, phase, size, animate, as, style."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='RainbowText'] > JSXAttribute[name.name='as'] > Literal[value!=/^(?:span|div|h1|h2|h3|p)$/]",
+        "message": "<RainbowText> as must be one of 'span' | 'div' | 'h1' | 'h2' | 'h3' | 'p'."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='ScreenText'] > JSXAttribute > JSXIdentifier[name!=/^(?:x|y|size|color|align|width|bg|children|style|key|ref|className|style|children)$/]",
+        "message": "<ScreenText> doesn't accept that prop. Declared props: x, y, size, color, align, width, bg, children, style."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='ScreenText'] > JSXAttribute[name.name='align'] > Literal[value!=/^(?:left|center|right)$/]",
+        "message": "<ScreenText> align must be one of 'left' | 'center' | 'right'."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='UnicornSprite'] > JSXAttribute > JSXIdentifier[name!=/^(?:cell|animate|frame|style|key|ref|className|style|children)$/]",
+        "message": "<UnicornSprite> doesn't accept that prop. Declared props: cell, animate, frame, style."
+      }
+    ]
+  },
+  "overrides": [
+    {
+      "files": [
+        "**/index.js"
+      ],
+      "rules": {
+        "no-restricted-imports": "off"
+      }
+    }
+  ],
+  "x-omelette": {
+    "components": {
+      "AppFrame": {
+        "replaces": []
+      },
+      "BootScene": {
+        "replaces": []
+      },
+      "DeviceScreen": {
+        "replaces": []
+      },
+      "MenuScreen": {
+        "replaces": []
+      },
+      "OptionItem": {
+        "replaces": []
+      },
+      "PixelIcon": {
+        "replaces": []
+      },
+      "RainbowBar": {
+        "replaces": []
+      },
+      "RainbowFrame": {
+        "replaces": []
+      },
+      "RainbowText": {
+        "replaces": []
+      },
+      "ScreenText": {
+        "replaces": []
+      },
+      "UnicornSprite": {
+        "replaces": []
+      }
+    },
+    "tokens": [
+      "--accent-ok",
+      "--accent-primary",
+      "--accent-secondary",
+      "--accent-warn",
+      "--boot-horizon",
+      "--boot-scene-h",
+      "--boot-title-h",
+      "--border-1",
+      "--border-2",
+      "--border-glitch-left",
+      "--border-glitch-right",
+      "--cu-black",
+      "--cu-cyan",
+      "--cu-floor",
+      "--cu-green",
+      "--cu-grid-blue",
+      "--cu-horizon",
+      "--cu-horn",
+      "--cu-horn-shade",
+      "--cu-lavender",
+      "--cu-magenta",
+      "--cu-magenta-hot",
+      "--cu-outline",
+      "--cu-panel-grey",
+      "--cu-pink",
+      "--cu-rainbow",
+      "--cu-rainbow-v",
+      "--cu-sky",
+      "--cu-sky-low",
+      "--cu-sky-top",
+      "--cu-sun",
+      "--cu-sun-mid",
+      "--cu-white",
+      "--ease-step",
+      "--font-body",
+      "--font-display",
+      "--font-mono",
+      "--frame-ms",
+      "--gallop-ms",
+      "--glitch-chance",
+      "--hue-step-deg",
+      "--icon-frame-ms",
+      "--icon-grid-h",
+      "--icon-grid-w",
+      "--icon-h",
+      "--icon-w",
+      "--phase-ms-per-deg",
+      "--pixel-cell",
+      "--radius-0",
+      "--radius-card",
+      "--radius-chip",
+      "--radius-screen",
+      "--screen-h",
+      "--screen-w",
+      "--shadow-glitch",
+      "--space-1",
+      "--space-2",
+      "--space-3",
+      "--space-4",
+      "--space-5",
+      "--space-6",
+      "--space-7",
+      "--space-8",
+      "--surface-floor",
+      "--surface-panel",
+      "--surface-screen",
+      "--tagline-max",
+      "--text-muted",
+      "--text-primary",
+      "--title-redraw-ticks",
+      "--tracking-display",
+      "--type-body",
+      "--type-cell-h",
+      "--type-cell-w",
+      "--type-console",
+      "--type-size-1",
+      "--type-size-2",
+      "--type-size-3"
+    ],
+    "tokenKinds": {
+      "--font-display": "font",
+      "--font-body": "font",
+      "--font-mono": "font",
+      "--type-cell-w": "spacing",
+      "--type-cell-h": "spacing",
+      "--type-size-1": "font",
+      "--type-size-2": "font",
+      "--type-size-3": "font",
+      "--type-body": "font",
+      "--type-console": "font",
+      "--tracking-display": "other",
+      "--cu-outline": "color",
+      "--cu-white": "color",
+      "--cu-lavender": "color",
+      "--cu-horn": "color",
+      "--cu-horn-shade": "color",
+      "--cu-cyan": "color",
+      "--cu-pink": "color",
+      "--cu-green": "color",
+      "--cu-magenta": "color",
+      "--cu-magenta-hot": "color",
+      "--cu-grid-blue": "color",
+      "--cu-sky-top": "color",
+      "--cu-sky-low": "color",
+      "--cu-floor": "color",
+      "--cu-sun-mid": "color",
+      "--cu-horizon": "color",
+      "--cu-black": "color",
+      "--cu-panel-grey": "color",
+      "--cu-rainbow": "color",
+      "--cu-rainbow-v": "color",
+      "--cu-sky": "color",
+      "--cu-sun": "color",
+      "--surface-screen": "color",
+      "--surface-panel": "color",
+      "--surface-floor": "color",
+      "--text-primary": "font",
+      "--text-muted": "font",
+      "--accent-primary": "color",
+      "--accent-secondary": "color",
+      "--accent-warn": "color",
+      "--accent-ok": "color",
+      "--border-glitch-left": "color",
+      "--border-glitch-right": "color",
+      "--screen-w": "spacing",
+      "--screen-h": "spacing",
+      "--boot-title-h": "spacing",
+      "--boot-scene-h": "spacing",
+      "--boot-horizon": "spacing",
+      "--pixel-cell": "spacing",
+      "--icon-grid-w": "other",
+      "--icon-grid-h": "other",
+      "--icon-w": "spacing",
+      "--icon-h": "spacing",
+      "--tagline-max": "other",
+      "--space-1": "spacing",
+      "--space-2": "spacing",
+      "--space-3": "spacing",
+      "--space-4": "spacing",
+      "--space-5": "spacing",
+      "--space-6": "spacing",
+      "--space-7": "spacing",
+      "--space-8": "spacing",
+      "--radius-0": "radius",
+      "--radius-chip": "radius",
+      "--radius-card": "radius",
+      "--radius-screen": "radius",
+      "--border-1": "spacing",
+      "--border-2": "spacing",
+      "--shadow-glitch": "shadow",
+      "--frame-ms": "other",
+      "--gallop-ms": "other",
+      "--icon-frame-ms": "other",
+      "--hue-step-deg": "other",
+      "--phase-ms-per-deg": "other",
+      "--title-redraw-ticks": "other",
+      "--glitch-chance": "other",
+      "--ease-step": "other"
+    },
+    "fontFamilies": [
+      "Press Start 2P",
+      "VT323"
+    ]
+  }
+}

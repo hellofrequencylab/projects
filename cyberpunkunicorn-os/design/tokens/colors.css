@@ -1,0 +1,45 @@
+/* CyberUnicorn 5000 colours. Base values come straight from the firmware:
+   unicorn palette (assets/make_unicorn.py), boot scene (apps/boot/unicorn_boot.cpp),
+   skin defaults (patch 0008: hot pink / cyan). The device is RGB565; these are the
+   24-bit sources before quantisation. */
+:root{
+  /* Unicorn palette, indices 2-9 of unicorn_sprite.h */
+  --cu-outline:#180628;      /* K deep purple */
+  --cu-white:#ffffff;        /* W body */
+  --cu-lavender:#c8b4ff;     /* w body shade */
+  --cu-horn:#ffdc3c;         /* H horn / sun top */
+  --cu-horn-shade:#ff8c00;   /* h */
+  --cu-cyan:#00ffff;         /* E cyber eye */
+  --cu-pink:#ff5ac8;         /* P nose / cheek */
+  --cu-green:#00ffa0;        /* G neon hooves */
+  /* Boot scene + icon extensions */
+  --cu-magenta:#ff00c8;      /* M grid rays, title shadow */
+  --cu-magenta-hot:#ff00a0;  /* title shadow right */
+  --cu-grid-blue:#00a0ff;    /* B grid lines (rush to 0,255,255) */
+  --cu-sky-top:#1e0046;      /* D */
+  --cu-sky-low:#600030;      /* V */
+  --cu-floor:#0c001c;        /* N grid floor */
+  --cu-sun-mid:#ff9678;      /* o */
+  --cu-horizon:#ff78ff;      /* horizon line */
+  --cu-black:#000000;        /* panel background, bgColor */
+  --cu-panel-grey:#202020;   /* 0x2104, GPIO chip fill */
+
+  /* Rainbow: full-saturation hue wheel, starting at hot pink (cyberItemColor) */
+  --cu-rainbow:linear-gradient(90deg,#ff00ff,#ff0000,#ffff00,#00ff00,#00ffff,#0000ff,#ff00ff); /* @kind color */
+  --cu-rainbow-v:linear-gradient(180deg,#ff0000,#ffff00,#00ff00,#00ffff,#0000ff,#ff00ff); /* @kind color */
+  --cu-sky:linear-gradient(180deg,#1e0046 0%,#3c0034 60%,#73001c 100%); /* @kind color */
+  --cu-sun:linear-gradient(180deg,#ffdc3c 0%,#ff9678 55%,#ff3cb4 100%); /* @kind color */
+
+  /* Semantic */
+  --surface-screen:var(--cu-black);
+  --surface-panel:var(--cu-sky-top);
+  --surface-floor:var(--cu-floor);
+  --text-primary:var(--cu-white);
+  --text-muted:var(--cu-lavender);
+  --accent-primary:var(--cu-magenta);  /* bruceConfig.priColor default (hot pink) */
+  --accent-secondary:var(--cu-cyan);
+  --accent-warn:var(--cu-horn);
+  --accent-ok:var(--cu-green);
+  --border-glitch-left:var(--cu-cyan);
+  --border-glitch-right:var(--cu-magenta-hot);
+}

@@ -1,0 +1,12 @@
+/* Timing from unicorn_boot.cpp and rainbow.cpp. Everything is stepped (no easing):
+   frames tick, colours walk the hue wheel. */
+:root{
+  --frame-ms:40ms; /* @kind other */          /* FRAME_MS, ~25 fps */
+  --gallop-ms:160ms; /* @kind other */        /* unicorn frame every 4 ticks */
+  --icon-frame-ms:240ms; /* @kind other */    /* icon A/B frame every 6 ticks */
+  --hue-step-deg:12; /* @kind other */        /* rainbow hue shift per tick (mane) */
+  --phase-ms-per-deg:25ms; /* @kind other */  /* cyberPhase(): millis()/25 */
+  --title-redraw-ticks:3; /* @kind other */
+  --glitch-chance:0.143; /* @kind other */    /* 1 in 7 title redraws */
+  --ease-step:steps(1,end); /* @kind other */
+}

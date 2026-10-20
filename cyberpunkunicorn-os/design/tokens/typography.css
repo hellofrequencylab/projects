@@ -1,0 +1,18 @@
+/* The device draws with the Adafruit GFX built-in 6x8 font (5x7 glyphs) at
+   text sizes 1-3, ASCII only. Web substitutes: Press Start 2P (display),
+   VT323 (body/console). Both are Google Fonts stand-ins, not the device font. */
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap');
+:root{
+  --font-display:'Press Start 2P',ui-monospace,monospace;
+  --font-body:'VT323',ui-monospace,monospace;
+  --font-mono:'VT323',ui-monospace,monospace;
+  /* GFX text sizes: one size step = 6x8 px per character cell */
+  --type-cell-w:6px; /* @kind spacing */
+  --type-cell-h:8px; /* @kind spacing */
+  --type-size-1:8px;   /* status bar, loading text, footer */
+  --type-size-2:16px;  /* menu labels, app titles */
+  --type-size-3:24px;  /* boot title */
+  --type-body:20px;    /* VT323 web body */
+  --type-console:18px;
+  --tracking-display:0; /* @kind other */
+}
