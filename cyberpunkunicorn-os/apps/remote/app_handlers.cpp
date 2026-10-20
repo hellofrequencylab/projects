@@ -131,12 +131,22 @@ void cmdScan(remote::Request &r) {
     putCard(r.data["card"].to<JsonObject>(), card);
     freq::UrlCheck u = freq::checkUrl(card.uri);
     if (u.kind != freq::URL_MEMBER) return r.fail("not_member_card", "that tag isn't a Frequency member card");
+    // No Wi-Fi, but the caller is the computer on the cable: hand it the signed
+    // scan to forward. This handler can't wait for frequency.relay_reply (it runs
+    // on the task that would deliver it), so the computer posts it and keeps the answer.
+    if (freq::cableAvailable()) {
+        freq::SignedScan sc = freq::signScan(u.token, card.uid, remote::trustedEpoch());
+        freq::putRelay(r.data["relay"].to<JsonObject>(), sc);
+        return;
+    }
     freq::ScanReply s = freq::postScan(u.token, card.uid);
     switch (s.status) {
         case freq::API_OK: break;
         case freq::API_DISABLED: return r.fail("reader_mode_off", "turn on reader mode and set the device id/secret");
         case freq::API_NOT_SET_UP: return r.fail("backend_not_set_up", freq::reasonWords("not_enabled").hint);
-        case freq::API_OFFLINE: return r.fail("offline", "queued; will retry when online");
+        case freq::API_OFFLINE:
+            if (!freq::queueScan({freq::nowEpoch(), card.uid, u.token})) return r.fail("offline", "queue full");
+            return r.fail("offline", "queued; will retry when online");
         default: return r.fail("rejected", s.reason);
     }
     r.data["member"]["display_name"] = s.name;

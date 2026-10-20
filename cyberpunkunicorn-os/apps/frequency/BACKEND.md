@@ -151,6 +151,20 @@ Errors use the same `ok: false` / `reason` shape.
 | `devid` | empty | device id |
 | `devsecret` | empty | device secret |
 
+Set them over the cable with `frequency.provision` (PROTOCOL.md "Setup over the
+cable"), which is how the website's Check-in & scanners panel does it.
+
+## Scans through the cable (no Wi-Fi)
+
+With no Wi-Fi and the website's device page open on the computer it is plugged
+into, a scan goes through that computer instead of the queue. The board signs it
+with HMAC-SHA256 keyed by sha256(secret), the hash the server already stores, and
+the computer posts it with `X-Frequency-Device-Id` + `X-Frequency-Signature`
+instead of `X-Frequency-Device`. Exact bytes, signature and replay rules:
+PROTOCOL.md "Scans through the cable". frequency-web has to accept that header
+pair on `POST /api/v1/devices/scan`; until it does, the server answers 401
+`device_unauthorized` and the board shows "NOT PAIRED".
+
 TLS: the device currently accepts any certificate (`setInsecure`). Pin the CA
 once a production device API exists.
 
@@ -160,6 +174,6 @@ once a production device API exists.
    check-in path (venue tags)?
 2. Device auth model: per-device secret (above) vs. a Space-scoped API key.
 3. Card token ↔ UID binding: on first scan (above), or at issue time?
-4. Should a late (queued) scan count for the day it happened (`scanned_at`) or
-   the day it arrived?
+4. ~~Should a late (queued) scan count for the day it happened?~~ Decided
+   (Daniel, 2026-10-20): yes, when `scanned_at` is signed and within a window.
 5. Card page at `/c/<token>`: member profile, or a "claim this card" flow?

@@ -12,7 +12,13 @@
 #include <WiFi.h>
 #include <algorithm>
 #include <globals.h>
+#include <sys/time.h>
 #include <vector>
+
+// The git commit this build came from (build.sh), so the website can tell builds apart.
+#ifndef FW_COMMIT
+#define FW_COMMIT "unknown"
+#endif
 
 namespace remote {
 
@@ -97,6 +103,12 @@ int logHead = 0, logCount = 0;
 uint32_t total = 0;
 portMUX_TYPE logMux = portMUX_INITIALIZER_UNLOCKED;
 
+// When a computer last sent an rpc line over USB (0 = never this boot), and the
+// clock it set with system.time (0 = never).
+volatile uint32_t usbRpcMs = 0;
+volatile uint32_t hostEpochAt = 0;   // epoch seconds the host gave us
+volatile uint32_t hostEpochMs = 0;   // millis() when it did
+
 void logCommand(const String &cmd, bool ok, SerialDevice *dev) {
     LogEntry e;
     e.ms = millis();
@@ -160,7 +172,9 @@ private:
 void cmdSystemStatus(Request &r) {
     r.data["os"] = OS_NAME;
     r.data["version"] = OS_VERSION;
+    r.data["commit"] = FW_COMMIT;
     r.data["bruce_version"] = BRUCE_VERSION;
+    r.data["proto"] = PROTO_VERSION;
     r.data["heap_free"] = ESP.getFreeHeap();
     r.data["heap_min"] = ESP.getMinFreeHeap();
     r.data["uptime_s"] = millis() / 1000;
@@ -263,7 +277,37 @@ void cmdHatProbe(Request &r) {
     r.data["advice"] = hp.advice();
 }
 
+// Every command this build answers, so the website can grey out the rest.
+void cmdSystemCaps(Request &r) {
+    r.data["proto"] = PROTO_VERSION;
+    r.data["version"] = OS_VERSION;
+    r.data["commit"] = FW_COMMIT;
+    JsonArray cmds = r.data["commands"].to<JsonArray>();
+    for (const Entry &e : registry()) cmds.add(e.name);
+}
+
+// system.time {epoch}: the computer's clock, in epoch seconds. The board has no
+// battery clock and Bruce boots with a made-up date, so a signed scan carries a
+// time only after this (or after it has been set some other way).
+void cmdSystemTime(Request &r) {
+    if (!r.args["epoch"].is<uint32_t>()) {
+        r.data["epoch"] = trustedEpoch();
+        return; // no epoch given: just report what the board believes
+    }
+    uint32_t epoch = r.args["epoch"].as<uint32_t>();
+    if (epoch < 1767225600UL) return r.fail("bad_args", "epoch is seconds since 1970, 2026 or later");
+    rtc.setTime(epoch);
+    struct timeval tv = {.tv_sec = (time_t)epoch};
+    settimeofday(&tv, nullptr);
+    clock_set = true;
+    hostEpochAt = epoch;
+    hostEpochMs = millis();
+    r.data["epoch"] = epoch;
+}
+
 REMOTE_COMMAND("system.status", cmdSystemStatus);
+REMOTE_COMMAND("system.caps", cmdSystemCaps);
+REMOTE_COMMAND("system.time", cmdSystemTime);
 REMOTE_COMMAND("apps.list", cmdAppsList);
 REMOTE_COMMAND("screen.nav", cmdScreenNav);
 REMOTE_COMMAND("cli.run", cmdCliRun);
@@ -330,6 +374,7 @@ bool handleLine(const String &raw) {
         out["ok"] = true;
         r.data = out["data"].to<JsonObject>();
 
+        if (dev == &USBserial) usbRpcMs = millis() | 1; // | 1: never 0, which means "never"
         Handler fn = cmd.isEmpty() ? nullptr : find(cmd);
         if (fn) fn(r);
         else if (planned(cmd)) r.fail("not_available", cmd + " isn't in this build yet");
@@ -396,6 +441,25 @@ void setBleAtBoot(bool on) {
 
 void boot() {
     if (bleAtBoot()) bleSetEnabled(true);
+    // Tells a computer that just opened the port (which resets this board) that
+    // the board is up and which protocol it speaks.
+    JsonDocument hello;
+    hello["proto"] = PROTO_VERSION;
+    hello["os"] = OS_NAME;
+    hello["fw"] = OS_VERSION;
+    hello["commit"] = FW_COMMIT;
+    hello["board"] = "cyd-2432s028r";
+    emit("hello", hello.as<JsonObjectConst>());
+}
+
+bool usbHostActive() {
+    uint32_t at = usbRpcMs;
+    return at && millis() - at < USB_HOST_TIMEOUT_MS;
+}
+
+uint32_t trustedEpoch() {
+    if (!hostEpochAt) return 0;
+    return hostEpochAt + (millis() - hostEpochMs) / 1000;
 }
 
 int recent(LogEntry *out, int maxCount) {

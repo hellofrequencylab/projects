@@ -129,8 +129,8 @@ is merged. Each app then registers its handler in one line (§5).
 ### `system.status` *
 
 ```json
-{"os":"CyberUnicorn 5000","version":"0.1.0","bruce_version":"1.16.1",
- "heap_free":81234,"heap_min":60123,"uptime_s":372,
+{"os":"CyberUnicorn 5000","version":"0.1.0","commit":"a1b2c3d","bruce_version":"1.16.1",
+ "proto":1,"heap_free":81234,"heap_min":60123,"uptime_s":372,
  "wifi":{"connected":false,"ssid":"","ip":"","ap_ip":"192.168.4.1"},
  "ble":{"enabled":true,"connected":1,"at_boot":false},
  "hat":{"live":["pn532"],"probed_s_ago":12}}
@@ -142,7 +142,23 @@ is merged. Each app then registers its handler in one line (§5).
   `hat` CLI), any of `cc1101`, `nrf24`, `pn532`, `ir`, `ook433`. It's `[]` with
   `probed_s_ago: null` if nothing has probed since boot. Status never drives the
   shared pins itself.
+- `commit` is the git commit the build came from (`build.sh`), with `-dirty` when it
+  was built from uncommitted changes. `proto` is the protocol version.
 - Extras beyond the brief: `heap_min`, `wifi.ap_ip`, `ble.connected`, `ble.at_boot`, `hat.probed_s_ago`.
+
+### `system.caps` *
+
+`{}` → `{"proto":1,"version":"0.1.0","commit":"a1b2c3d","commands":["system.status", ...]}`.
+Every command this build answers. Grey out the rest instead of waiting for
+`unknown_command`.
+
+### `system.time` *
+
+`{"epoch":1792526400}` → `{"epoch":1792526400}`. Sets the board's clock from the
+computer's (epoch seconds, 2026 or later). The board has no battery clock and Bruce
+boots with a made-up date, so **send this right after the hello**: a scan through
+the cable carries no usable time until it has been set. `{}` reports the time the
+board trusts (`0` = never set this boot).
 
 ### `apps.list` *
 
@@ -289,6 +305,87 @@ network or a phone hotspot.
 Serial equivalents: `wifi add "<ssid>" ["<password>"]`, `wifi forget "<ssid>"`
 (patch 0015), `netcheck`.
 
+### Frequency tags (`apps/remote/app_handlers.cpp`)
+
+Each waits for a tap (`timeout_ms`, default 10000, max 30000) and emits
+`frequency.waiting_for_tag` first. A card is
+`{uid, type, ntag, locked, capacity, uri, kind}`, `kind` being `venue check-in`,
+`event door`, `member card`, `other` or `empty`.
+
+| cmd | args | data |
+|---|---|---|
+| `frequency.read_tag` | `{timeout_ms?}` | the card |
+| `frequency.write_tag` | `{url, label?, timeout_ms?}` | the card + `written` (host + path, no signature). Fails `bad_url`, `write_failed`. |
+| `frequency.scan` | `{timeout_ms?}` | `{card, member:{display_name}, zapsAwarded, loyalty?:{stamps, required, earned, reward_code?}}`, or `{card, relay}` through the cable (below). Fails `not_member_card`, `reader_mode_off`, `backend_not_set_up`, `offline` (queued) or `rejected` (`message` = the server's reason code). |
+
+All three fail `no_reader` (PN532 not answering: DIP 3), `busy`, `timeout` or `card_error`.
+
+### Setup over the cable (`apps/frequency/provision.cpp`)
+
+Makes a board a Space's counter scanner without typing anything on it (plan
+Phase 3). The website registers the scanner (the owner action in Check-in &
+scanners), sends the id and secret straight to the board, then puts it on Wi-Fi
+with `wifi.scan` + `wifi.join`.
+
+| cmd | args | data |
+|---|---|---|
+| `frequency.config` | `{}` | `{reader, base, device_id, secret_set, ready, queued, clock_set, cable}`. The secret is never sent back. `ready` = reader on with an id and secret. `cable` = a scan right now would go through this computer (no Wi-Fi, clock set, ready). |
+| `frequency.provision` | `{device_id, secret, base?, reader?: true}` | same as `frequency.config`. `device_id` is the scanner's uuid, `secret` its 43-character base64url secret, `base` the site origin (default `https://frequencylocal.com`). Provisioning a different `device_id` drops the old one's offline queue. `bad_args` says which field is wrong. |
+| `frequency.unprovision` | `{}` | same as `frequency.config`. Forgets the id and secret, turns reader mode off and drops the offline queue. Use it when the owner revokes the scanner with the board plugged in. |
+
+The board stores the secret in NVS (namespace `frequency`, key `devsecret`).
+Without flash encryption anyone holding the board can read it; that is the
+threat model frequency-web's LOYALTY §7 accepts (a stolen secret checks in only
+that Space's cards, once per member per day, until revoked).
+
+**The serial log never shows an `rpc` line's arguments.** Bruce echoes every line
+it reads as `COMMAND: <line>`; patch 0014 prints just `COMMAND: rpc` for these,
+because `frequency.provision` and `wifi.join` carry secrets.
+
+### Scans through the cable (`apps/frequency/backend.cpp`)
+
+A board with no Wi-Fi, plugged into a computer whose device page is open, checks
+members in through that computer (plan Phase 5). **The secret never leaves the
+board:** the board signs the scan, and the computer forwards the exact bytes.
+
+The board uses the cable when all of these hold: no Wi-Fi, the computer sent an
+`rpc` line over USB in the last **30 s** (send `system.status` every ~10 s while
+the page is open), `system.time` has been set this boot, and the scanner is
+provisioned. Otherwise it queues the scan as before.
+
+1. A member taps a card on the Frequency home screen. The board emits
+   `@evt {"event":"frequency.scan_relay","data":{"nonce":"9f86d081","device_id":"<uuid>","body":"<json>","signature":"v1=<hex>"}}`.
+   `body` is a JSON **string**, for example
+   `{"card_token":"Q2hh…","uid":"04A1B2C3D4E5F6","scanned_at":1792526400,"nonce":"9f86d081"}`.
+2. The computer POSTs `body` byte for byte to `{base}/api/v1/devices/scan` with
+   `Content-Type: application/json`, `X-Frequency-Device-Id: <device_id>` and
+   `X-Frequency-Signature: <signature>`. No `X-Frequency-Device` header: the
+   computer doesn't have the secret.
+3. It sends the answer back: `rpc {"id":7,"cmd":"frequency.relay_reply","args":{"nonce":"9f86d081","status":200,"body":{...the server's JSON...}}}`.
+   `status` is the HTTP status, or `0` if the computer couldn't reach the server
+   (the board then queues the scan). Keep the line under 512 bytes: the scan reply
+   is small. A reply after the board stopped waiting (12 s) fails `not_waiting`.
+4. The board shows the result exactly as for a Wi-Fi scan.
+
+`rpc frequency.scan` over the cable with no Wi-Fi works the same way, but in the
+reply: its data is `{card, relay:{nonce, device_id, body, signature}}` and the
+computer posts it and keeps the answer (the board can't wait for a second command
+while it is still answering the first).
+
+**Signature** (what the server checks):
+
+```
+key       = sha256(secret)                       (the 32 raw bytes; the server stores this hash as hex)
+message   = "scan:v1:" + device_id + ":" + body  (body = the exact bytes posted)
+signature = "v1=" + hex(HMAC-SHA256(key, message))
+```
+
+The server then rejects a `scanned_at` more than a few minutes from its own clock,
+and a `nonce` it has already seen from that device within the window, so a
+captured request can't be replayed. Keying on the stored hash means a database
+leak could forge cable scans for that Space, which is the same blast radius as a
+leaked device secret; revoke the scanner either way.
+
 ### Planned commands (not in this build)
 
 Handlers are wired in by the coordinator when each app branch merges. Args and data
@@ -300,9 +397,6 @@ as agreed for v1:
 | `sound.tone` | `{hz, ms}` | `{hz, ms}` (returns once the tone has started) |
 | `light.read` | `{}` | `{raw, percent}` (CYD LDR on GPIO 34) |
 | `sensors.read` | `{}` | `{sensors:[{name, kind, value, unit}]}`, e.g. `{"name":"AHT20","kind":"temperature","value":21.4,"unit":"C"}` |
-| `frequency.read_tag` | `{}` | `{uid, url?, label?, type}` (waits up to ~5 s for a tag; `busy` if none) |
-| `frequency.write_tag` | `{url, label?}` | `{uid, written:true}` |
-| `frequency.scan` | `{}` | the frequency-web scan result: `{ok, reason?, member, zapsAwarded, loyalty}` |
 
 Exact field names for these get fixed by their app branches. Each branch must update
 this table when it registers its handler.
@@ -314,6 +408,9 @@ this table when it registers its handler.
 | `lightshow.state` | same as `lightshow.state` | show starts, stops, or changes scene/level (buttons or remote) |
 | `lightshow.error` | `{message}` | reserved; not sent since Light Show plays on screen only when the hat owns its pin |
 | `wifi.joining` | `{}` | `wifi.join` started (it can take up to 30 s) |
+| `hello` | `{proto, os, fw, commit, board}`, e.g. `{"proto":1,"os":"CyberUnicorn 5000","fw":"0.1.0","commit":"a1b2c3d","board":"cyd-2432s028r"}` | once, at the end of boot (~18 s after the port opened, since opening it resets the board). Then send `system.time`. |
+| `frequency.waiting_for_tag` | `{}` | a `frequency.*` command is waiting for a tap |
+| `frequency.scan_relay` | `{nonce, device_id, body, signature}` | a card was tapped with no Wi-Fi and this computer on the cable: forward it (Scans through the cable) |
 | `spectrum` | same as `spectrum.read` | each sweep (max 4/s) while streaming and the Spectrum screen is open |
 
 Events go to USB always, and to BLE when a phone is connected.

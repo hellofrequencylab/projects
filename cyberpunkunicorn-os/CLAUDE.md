@@ -11,7 +11,11 @@ build (copied, not shared — that project stays as the known-good fallback).
 - PlatformIO **6.2.0**, esptool **5.4.0** — in `.venv/`, created by `build.sh`
 - OS identity: `OS_NAME` / `OS_VERSION` at the top of `build.sh` ("CyberUnicorn 5000", 0.1.0).
   The display font has no ™ glyph: screens draw a superscript "TM"; serial prints a real ™.
-- Build: `./build.sh` → `build/app.bin`, `build/full.bin`
+- Build: `./build.sh` → `build/app.bin`, `build/full.bin`, `build/manifest.json` (version, commit,
+  app.bin size + sha256, offset 0x10000: what the website's updater reads)
+- CI: `.github/workflows/cyberpunkunicorn-os.yml` builds every push/PR touching this folder
+  and fails if app.bin outgrows the 0x3C0000 app partition. Tag `cu5k-v<OS_VERSION>`
+  to publish a GitHub release with app.bin, full.bin and manifest.json
 - Flash: `./flash.sh` (app only, keeps on-device settings) or `./flash.sh --full`
 - Remote: `./remote.sh` mirrors the screen to http://localhost:8765 over serial
 - Test: none automated. A clean build is the minimum bar; confirm on the device
@@ -46,7 +50,8 @@ User-tunable values go in `boot.conf` → `-D` macros via `PLATFORMIO_BUILD_FLAG
   before SimpleCLI (which strips quotes, so JSON can't be a normal argument);
   `cyberAppsBoot()` at the end of setup; while the BLE API is on, the CLI task still
   reads USB and answers on the source transport; `rpc` lines skip the `# ` prompt
-  and the back-to-menu; `isBLEAPIEnabled()`; BLE advertised name `CU5K`
+  and the back-to-menu; `isBLEAPIEnabled()`; BLE advertised name `CU5K`; the `COMMAND:` echo
+  shows only `rpc` for rpc lines (they can carry a Wi-Fi password or the scanner secret)
 - `0015` Wi-Fi joins: open networks count as saved (`hasWifiCredential`; upstream
   treated an empty password as "not saved"), `wifi add "<ssid>"` with no password,
   `wifi forget`, password no longer trimmed; join timeout 10 s → 20 s with a reason
@@ -90,6 +95,12 @@ source published if builds are distributed.
   Member scan / issue card call frequency-web's device API (reader mode off by
   default; contract in `apps/frequency/BACKEND.md`; 404 = `not_enabled`).
   NVS namespace `frequency`. CLI: `frequency status|read|tag|tags|log|scan|issue|queue|config`.
+  Remote setup over the cable: `frequency.config|provision|unprovision` (`provision.cpp`).
+  With no Wi-Fi and a computer sending `rpc` over USB in the last 30 s (and its clock
+  set via `system.time`), a scan is signed on the board (HMAC-SHA256 keyed by
+  sha256(secret)) and sent through the computer as `@evt frequency.scan_relay`; the
+  answer comes back as `frequency.relay_reply`. `postScan()` waits for it, so it must
+  run on the UI task, never in a remote handler.
   Uses Bruce's `PN532` (`read()`, `write_ndef()` with `rawNdefRecord`, since
   `buildNdefMessage` caps URIs at 99 chars). Not yet tested with real tags.
 - `hooks.h` — what patch 0014 calls: raw-line hook and boot hook.
@@ -101,6 +112,9 @@ source published if builds are distributed.
   USB serial and BLE, contract in [`apps/remote/PROTOCOL.md`](apps/remote/PROTOCOL.md).
   Apps add a command with one line, `REMOTE_COMMAND("name", handler)` (`remote/remote.h`).
   Menu app: live status, recent commands, Bluetooth now / at boot (NVS `remote/bleboot`).
+  Boot ends with `@evt hello {proto, os, fw, commit, board}`; `system.caps` lists every
+  registered command; `system.time {epoch}` sets the clock from the computer.
+  `build.sh` stamps the git commit (`FW_COMMIT`, `-dirty` if apps/patches changed).
   CLI: `remote [ble on|off] [boot on|off]`. Android must open the CH340 with DTR/RTS
   off. BLE replies are split to MTU−3 per notification. Not yet tested on hardware.
 - `hardware/` — **Library** + hardware registry (`hardware.h`). Apps with a hardware

@@ -86,15 +86,25 @@ cp -R apps .bruce/src/cyber_apps
 
 # Report the real Bruce version instead of upstream's local "dev"; our own
 # name/version go in OS_NAME/OS_VERSION (patch 0005).
-sed -i '' "s/-DBRUCE_VERSION='\"dev\"'/-DBRUCE_VERSION='\"$BRUCE_TAG\"'/" .bruce/platformio.ini
+# (-i.bak + rm: the one in-place form both BSD sed on macOS and GNU sed on Linux CI accept.)
+sed -i.bak "s/-DBRUCE_VERSION='\"dev\"'/-DBRUCE_VERSION='\"$BRUCE_TAG\"'/" .bruce/platformio.ini
+rm -f .bruce/platformio.ini.bak
+
+# The commit this build came from, reported by system.status and the boot hello.
+# "-dirty" when apps/, patches/ or this script have uncommitted changes.
+FW_COMMIT=$(git rev-parse --short=7 HEAD 2>/dev/null || echo unknown)
+if [[ "$FW_COMMIT" != unknown ]] && ! git diff --quiet HEAD -- apps patches build.sh boot.conf 2>/dev/null; then
+  FW_COMMIT+="-dirty"
+fi
 
 # Bruce's patch.py shells out to a bare `pio`; without this it half-patches
 # libnet80211.a (renames it to .old) and the link fails.
 export PATH="$PWD/.venv/bin:$PATH"
-export PLATFORMIO_BUILD_FLAGS="-DOS_NAME='\"$OS_NAME\"' -DOS_VERSION='\"$OS_VERSION\"' -DBOOT_TITLE='\"$BOOT_TITLE\"' -DBOOT_TAGLINE='\"$BOOT_TAGLINE\"'$extra_flags"
+export PLATFORMIO_BUILD_FLAGS="-DOS_NAME='\"$OS_NAME\"' -DOS_VERSION='\"$OS_VERSION\"' -DFW_COMMIT='\"$FW_COMMIT\"' -DBOOT_TITLE='\"$BOOT_TITLE\"' -DBOOT_TAGLINE='\"$BOOT_TAGLINE\"'$extra_flags"
 # One build at a time per machine: Bruce's patch.py edits libnet80211.a in the
 # shared ~/.platformio cache, so parallel builds (e.g. several worktrees) corrupt it.
 LOCK="$HOME/.platformio/.cyberunicorn-build.lock" # next to the shared cache it protects
+mkdir -p "$(dirname "$LOCK")" # a fresh machine (or CI runner) has no ~/.platformio yet
 until mkdir "$LOCK" 2>/dev/null; do
   echo "Another CyberUnicorn build holds $LOCK (pid $(cat "$LOCK/pid" 2>/dev/null)); waiting..." >&2
   if [[ -f "$LOCK/pid" ]] && ! kill -0 "$(cat "$LOCK/pid")" 2>/dev/null; then rm -rf "$LOCK"; continue; fi
@@ -107,4 +117,24 @@ trap 'rm -rf "$LOCK"' EXIT
 mkdir -p build
 cp ".bruce/.pio/build/$PIO_ENV/firmware.bin" build/app.bin
 cp ".bruce/Bruce-$PIO_ENV.bin" build/full.bin
-ls -l build/*.bin
+
+# What the website's updater reads (plan Phase 6): which build this is and how to
+# check it arrived whole. The updater flashes app.bin at 0x10000 only, like
+# ./flash.sh without --full, so NVS (scanner key, Wi-Fi) survives.
+python3 - "$OS_VERSION" "$FW_COMMIT" "$BRUCE_TAG" <<'PY'
+import hashlib, json, os, sys
+version, commit, bruce = sys.argv[1:4]
+app = open("build/app.bin", "rb").read()
+json.dump({
+    "board": "cyd-2432s028r",
+    "os": "CyberUnicorn 5000",
+    "version": version,
+    "commit": commit,
+    "bruce_version": bruce,
+    "proto": 1,
+    "app": {"file": "app.bin", "offset": 0x10000, "size": len(app),
+            "sha256": hashlib.sha256(app).hexdigest()},
+    "app_partition_size": 0x3C0000,
+}, open("build/manifest.json", "w"), indent=2)
+PY
+ls -l build/*.bin build/manifest.json
