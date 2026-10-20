@@ -1,11 +1,14 @@
 #include "LightShowMenu.h"
 
 #include "../hat/hat_probe.h"
+#include "../remote/remote.h"
 #include "../ui/rainbow.h"
 #include "core/display.h"
+#include "core/main_menu.h"
 #include "core/utils.h"
 #include "scenes.h"
 #include <Preferences.h>
+#include <algorithm>
 #include <esp32-hal-rmt.h>
 #include <globals.h>
 #include <math.h>
@@ -164,9 +167,138 @@ void drawLevel(const Layout &l, int level) {
     }
 }
 
+// Remote control. The show runs on the UI task; rpc handlers run on the CLI task
+// and only leave requests here, which the show loop picks up each frame.
+struct RemoteState {
+    volatile bool running = false;
+    volatile int index = 0, level = 1;   // what's showing (valid while running)
+    volatile int reqIndex = -1, reqLevel = -1;
+    volatile bool reqStop = false;
+    volatile bool reqStart = false;      // optionsMenu() jumps straight into run()
+};
+RemoteState rs;
+
+int wrapScene(int i) {
+    int n = sceneCount();
+    return ((i % n) + n) % n;
+}
+
+// Shared by the lightshow.state reply and the lightshow.state event.
+void fillState(JsonObject d, bool running, int index, int level) {
+    d["running"] = running;
+    d["scene"] = index;
+    d["scene_name"] = scene(index)->name();
+    d["level"] = level;
+    d["level_percent"] = (int)(LEVELS[level] * 100 + 0.5f);
+    d["level_count"] = LEVEL_COUNT;
+    Settings s;
+    s.load();
+    d["pin"] = s.pin;
+    JsonArray names = d["scenes"].to<JsonArray>();
+    for (int i = 0; i < sceneCount(); i++) names.add(scene(i)->name());
+}
+
+void emitState(bool running, int index, int level) {
+    JsonDocument doc;
+    fillState(doc.to<JsonObject>(), running, index, level);
+    remote::emit("lightshow.state", doc.as<JsonObjectConst>());
+}
+
+void currentState(bool &running, int &index, int &level) {
+    running = rs.running;
+    if (running) {
+        index = rs.reqIndex >= 0 ? rs.reqIndex : rs.index;
+        level = rs.reqLevel >= 0 ? rs.reqLevel : rs.level;
+    } else {
+        Settings s;
+        s.load();
+        index = wrapScene(s.index);
+        level = s.level;
+    }
+}
+
+void cmdState(remote::Request &r) {
+    bool running;
+    int index, level;
+    currentState(running, index, level);
+    fillState(r.data, running, index, level);
+}
+
+// {scene?: index or name, level?: 0..4, running?: bool}
+void cmdSet(remote::Request &r) {
+    int index = -1, level = -1;
+    JsonVariantConst sc = r.args["scene"];
+    if (sc.is<int>()) {
+        index = sc.as<int>();
+        if (index < 0 || index >= sceneCount())
+            return r.fail("bad_args", "scene is 0-" + String(sceneCount() - 1));
+    } else if (sc.is<const char *>()) {
+        String want = sc.as<const char *>();
+        for (int i = 0; i < sceneCount(); i++)
+            if (want.equalsIgnoreCase(scene(i)->name())) index = i;
+        if (index < 0) return r.fail("bad_args", "no scene named " + want);
+    } else if (!sc.isNull()) {
+        return r.fail("bad_args", "scene is an index or a name");
+    }
+    JsonVariantConst lv = r.args["level"];
+    if (!lv.isNull()) {
+        if (!lv.is<int>() || lv.as<int>() < 0 || lv.as<int>() >= LEVEL_COUNT)
+            return r.fail("bad_args", "level is 0-" + String(LEVEL_COUNT - 1));
+        level = lv.as<int>();
+    }
+    JsonVariantConst run = r.args["running"];
+    if (!run.isNull() && !run.is<bool>()) return r.fail("bad_args", "running is true or false");
+
+    if (rs.running) {
+        if (index >= 0) rs.reqIndex = index;
+        if (level >= 0) rs.reqLevel = level;
+        if (run.is<bool>() && !run.as<bool>()) rs.reqStop = true;
+    } else {
+        // Not showing: save for next start, exactly as the buttons would have.
+        Settings s;
+        s.load();
+        if (index >= 0) s.index = index;
+        if (level >= 0) s.level = level;
+        if (index >= 0 || level >= 0) s.save();
+
+        if (run.is<bool>() && run.as<bool>()) {
+            // Starting means opening the app on the UI task, which only works from the
+            // main menu: forceMenuOption picks an entry from whatever menu is open.
+            if (menuOptionType != MENU_TYPE_MAIN)
+                return r.fail("busy", "Go back to the main menu first (screen.nav esc)");
+            int pos = 0, found = -1;
+            const std::vector<String> &hidden = bruceConfig.disabledMenus;
+            for (MenuItemInterface *item : mainMenu.getItems()) {
+                String name = item->getName();
+                if (std::find(hidden.begin(), hidden.end(), name) != hidden.end()) continue;
+                if (name == "Light Show") found = pos;
+                pos++;
+            }
+            if (found < 0) return r.fail("not_available", "Light Show is hidden in the main menu");
+            rs.reqStart = true;
+            forceMenuOption = found;
+            r.data["starting"] = true;
+        }
+    }
+    bool running;
+    int idx, lvl;
+    currentState(running, idx, lvl);
+    fillState(r.data, running, idx, lvl);
+}
+
+REMOTE_COMMAND("lightshow.state", cmdState);
+REMOTE_COMMAND("lightshow.set", cmdSet);
+
 } // namespace
 
+bool lightshowRunning() { return rs.running; }
+
 void LightShowMenu::optionsMenu() {
+    if (rs.reqStart) { // opened by lightshow.set {running:true}
+        rs.reqStart = false;
+        run();
+        return;
+    }
     Settings s;
     s.load();
     options = {
@@ -214,11 +346,17 @@ void LightShowMenu::run() {
     if (s.pin == 22 || s.pin == 27) {
         HatProbeResult hp = probeHat();
         if (hp.pn532 || hp.cc1101 || hp.nrf24) {
+            JsonDocument ev;
+            ev["message"] = hp.summary() + " is on. Turn DIP 1-5 OFF for the LED panel.";
+            remote::emit("lightshow.error", ev.as<JsonObjectConst>());
             displayWarning(hp.summary() + " is on. Turn DIP 1-5 OFF for the LED panel.", true);
             return;
         }
     }
     bool hasPanel = panel.begin(s.pin);
+    rs.reqIndex = -1;
+    rs.reqLevel = -1;
+    rs.reqStop = false;
 
     const int count = sceneCount();
     int index = ((s.index % count) + count) % count;
@@ -242,6 +380,11 @@ void LightShowMenu::run() {
     const char *lastLabel = nullptr;
     drawSceneInfo(l, index, count, nullptr);
     drawLevel(l, level);
+
+    rs.index = index;
+    rs.level = level;
+    rs.running = true;
+    emitState(true, index, level);
 
     float t = 0;
     uint32_t lastTick = millis(), lastPreview = 0;
@@ -279,27 +422,37 @@ void LightShowMenu::run() {
             }
         }
 
-        bool changed = false;
+        bool changed = false, levelChanged = false;
         if (check(NextPress)) index = (index + 1) % count, changed = true;
         if (check(PrevPress)) index = (index + count - 1) % count, changed = true;
-        if (check(SelPress)) {
-            level = (level + 1) % LEVEL_COUNT;
+        if (check(SelPress)) level = (level + 1) % LEVEL_COUNT, levelChanged = true;
+        int want = rs.reqIndex;
+        if (want >= 0) rs.reqIndex = -1, index = want % count, changed = true;
+        want = rs.reqLevel;
+        if (want >= 0) rs.reqLevel = -1, level = want % LEVEL_COUNT, levelChanged = true;
+        if (check(EscPress) || rs.reqStop) break;
+        if (levelChanged) {
             drawLevel(l, level);
             s.level = level;
             s.save();
+            rs.level = level;
         }
-        if (check(EscPress)) break;
         if (changed) {
+            rs.index = index;
             s.index = index;
             s.save();
             buildGamma(scene(index)->gamma(), gam);
             lastLabel = nullptr;
             drawSceneInfo(l, index, count, scene(index)->label());
         }
+        if (changed || levelChanged) emitState(true, index, level);
         delay(15);
     }
 
     panel.end();
+    rs.running = false;
+    rs.reqStop = false;
+    emitState(false, index, level);
     returnToMenu = true;
 }
 
