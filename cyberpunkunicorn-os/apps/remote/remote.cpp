@@ -1,5 +1,6 @@
 #include "remote.h"
 
+#include "../hardware/hardware.h"
 #include "../hat/hat_probe.h"
 #include "../lightshow/LightShowMenu.h"
 #include "core/display.h"
@@ -201,6 +202,7 @@ void cmdAppsList(Request &r) {
         String name = item->getName();
         a["name"] = name;
         a["hidden"] = std::find(hidden.begin(), hidden.end(), name) != hidden.end();
+        a["library"] = !hw::appActive(name); // waiting in the Library for its hardware
     }
 }
 

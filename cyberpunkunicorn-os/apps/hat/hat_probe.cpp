@@ -1,5 +1,7 @@
 #include "hat_probe.h"
 
+#include "../hardware/hardware.h"
+
 #include "core/bus_HAL.h"
 #include <SPI.h>
 #include <globals.h>
@@ -168,6 +170,7 @@ HatProbeResult probeHat() {
     lastResult = r;
     lastAt = millis();
     haveLast = true;
+    hw::ingestProbe(r); // keeps the Library / main menu in step with what is plugged in
     return r;
 }
 

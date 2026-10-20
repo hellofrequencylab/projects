@@ -47,6 +47,9 @@ User-tunable values go in `boot.conf` → `-D` macros via `PLATFORMIO_BUILD_FLAG
   `cyberAppsBoot()` at the end of setup; while the BLE API is on, the CLI task still
   reads USB and answers on the source transport; `rpc` lines skip the `# ` prompt
   and the back-to-menu; `isBLEAPIEnabled()`; BLE advertised name `CU5K`
+- `0015` hardware library: main menu skips apps whose hardware isn't found
+  (`cyberAppActive()`), lists `CYBER_APP_MENU_TAIL` (Library) before Config, and
+  opens items through `cyberHardwareGate()` (DIP switch card for hat apps)
 
 (No 0002: the nm-rf-hat cat scene was dropped for the unicorn.) Macros in 0003–0004
 keep their `NM_` prefix from `nm-rf-hat/`; renaming them is churn.
@@ -82,6 +85,19 @@ source published if builds are distributed.
   Menu app: live status, recent commands, Bluetooth now / at boot (NVS `remote/bleboot`).
   CLI: `remote [ble on|off] [boot on|off]`. Android must open the CH340 with DTR/RTS
   off. BLE replies are split to MTU−3 per notification. Not yet tested on hardware.
+- `hardware/` — **Library** + hardware registry (`hardware.h`). Apps with a hardware
+  rule (`NEEDS` in `hardware.cpp`: Frequency/RFID → PN532; RF → CC1101 or 433;
+  NRF24; IR; Sensors → I2C sensor or node; Sound → speaker; Light Show → LED panel;
+  GPS, LoRa, Ethernet, FM) stay out of the main menu until a part is present, and
+  wait in the Library app. Present = detected by any `probeHat()` (it calls
+  `hw::ingestProbe`) and **sticky** in NVS `cyberhw` (`seen`, `marked`), so flipping the
+  DIP switch doesn't reshuffle the menu; parts the probe can't see are marked by hand
+  ("I have: ..."). Opening a hat app re-probes; if its module isn't live, the design
+  system's `cyberHardwareCard` says which DIP to turn on (Check again / Open anyway /
+  Back). Probe at boot from `cyberAppsBoot()`. Bit names are `HW_*` because the CYD
+  board flags define `FM`, `FP`, `FG` and Arduino defines `bit()`. CLI: `hw`,
+  `hw rescan`, `hw have|nothave <part>`, `hw forget <part>|all`. Remote:
+  `hardware.list|rescan|mark`; `apps.list` gains `library`. Not yet run on the board.
 - `hat/` — **Hat**: probes which hat module is live (I2C 0x24 for PN532, CC1101
   PARTNUM/VERSION, nRF24 SETUP_AW, RX-pin noise for IR/433). CLI: `hat`.
   Verified: PN532 detected with DIP 3 on. IR/433 is a heuristic — unverified.

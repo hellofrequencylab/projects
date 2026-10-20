@@ -16,6 +16,7 @@
 #include "hat/HatMenu.h"
 #include "gpio/GpioMenu.h"
 #include "remote/RemoteMenu.h"
+#include "hardware/LibraryMenu.h"
 
 // Members of MainMenu (one instance per app).
 #define CYBER_APP_MEMBERS \
@@ -29,10 +30,15 @@
     WeatherMenu weatherMenu; \
     HatMenu hatMenu; \
     GpioMenu gpioMenu; \
-    RemoteMenu remoteMenu;
+    RemoteMenu remoteMenu; \
+    LibraryMenu libraryMenu;
 
 // Pointers listed first in the main menu, in this order.
 #define CYBER_APP_MENU_ITEMS &frequencyMenu, &lightShowMenu, &sensorsMenu, &ledMenu, &lightMenu, &soundMenu, &slideshowMenu, &weatherMenu, &hatMenu, &gpioMenu, &remoteMenu,
+
+// Listed just before Config (patch 0015). Apps whose hardware isn't found yet live
+// in here instead of the main menu (hardware/hardware.h has the rules).
+#define CYBER_APP_MENU_TAIL &libraryMenu,
 
 inline void cyberAppsCreateCommands(SimpleCLI *cli) {
     createFrequencyCommand(cli);
@@ -45,4 +51,5 @@ inline void cyberAppsCreateCommands(SimpleCLI *cli) {
     createHatCommand(cli);
     createPinsCommand(cli);
     createRemoteCommand(cli);
+    createHardwareCommand(cli);
 }
