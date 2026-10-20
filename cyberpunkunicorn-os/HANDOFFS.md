@@ -18,15 +18,14 @@ feature branch.
 | 4 | `claude/cu-onboard-apps-a451cf` | `60f7c78` `679a5af` `a9eefcb` `bd5f29b` | **LED, Light, Sound, GPIO** (+22,976 B with #5) | boots only |
 | 5 | (coordinator) | `dc7b609` | Remote commands wired to LED/Sound/Light/Sensors/Frequency (`apps/remote/app_handlers.cpp`) | no |
 | 6 | `claude/cu-onboard-apps-a451cf` | `c903a1d` | Fix: `pins` crash + garbage `light` (Bruce's broken `serialDevice->printf`) | no |
+| 7 | `claude/cu-launcher-ports-010d8c` | `8386991` `ade98e3` | **Slideshow** (`/slides` on SD/LittleFS) and **Weather** (synthwave card, Wi-Fi) (+24,912 B) | no |
 
 Conflicts were only in `apps/apps.h` (regenerated from the full app list), and in
 `CLAUDE.md`/`SCOPE.md` (both sides kept).
 
 ## Waiting
 
-| Branch | State | Next |
-|---|---|---|
-| `claude/cu-launcher-ports-010d8c` | Slideshow + Weather written, compiling, uncommitted | session commits → coordinator merges as #7 |
+Nothing. Every CyberUnicorn branch is merged (11 apps).
 
 ## Separate projects (not part of this firmware)
 
