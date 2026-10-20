@@ -7,7 +7,6 @@
 #include "frequency/FrequencyMenu.h"
 #include "lightshow/LightShowMenu.h"
 #include "sensors/SensorsMenu.h"
-#include "led/LedMenu.h"
 #include "light/LightMenu.h"
 #include "sound/SoundMenu.h"
 #include "slideshow/SlideshowMenu.h"
@@ -24,7 +23,6 @@
     FrequencyMenu frequencyMenu; \
     LightShowMenu lightShowMenu; \
     SensorsMenu sensorsMenu; \
-    LedMenu ledMenu; \
     LightMenu lightMenu; \
     SoundMenu soundMenu; \
     SlideshowMenu slideshowMenu; \
@@ -35,7 +33,7 @@
     LibraryMenu libraryMenu;
 
 // Pointers listed first in the main menu, in this order.
-#define CYBER_APP_MENU_ITEMS &frequencyMenu, &lightShowMenu, &sensorsMenu, &ledMenu, &lightMenu, &soundMenu, &slideshowMenu, &weatherMenu, &hatMenu, &gpioMenu, &remoteMenu,
+#define CYBER_APP_MENU_ITEMS &frequencyMenu, &lightShowMenu, &sensorsMenu, &lightMenu, &soundMenu, &slideshowMenu, &weatherMenu, &hatMenu, &gpioMenu, &remoteMenu,
 
 // Listed just before Config (patch 0016). Apps whose hardware isn't found yet live
 // in here instead of the main menu (hardware/hardware.h has the rules).
@@ -44,7 +42,6 @@
 inline void cyberAppsCreateCommands(SimpleCLI *cli) {
     createFrequencyCommand(cli);
     createSensorsCommand(cli);
-    createLedCommand(cli);
     createLightCommand(cli);
     createSoundCommand(cli);
     createSlideshowCommand(cli);

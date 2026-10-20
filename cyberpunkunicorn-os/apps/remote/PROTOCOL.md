@@ -270,8 +270,7 @@ as agreed for v1:
 
 | cmd | args | data |
 |---|---|---|
-| `led.set` | `{r,g,b}` 0-255 | `{r,g,b}` |
-| `led.mode` | `{mode}`: proposed `"off"`, `"solid"`, `"rainbow"`, `"breathe"` (the LED app's modes) | `{mode}` |
+| `led.set`, `led.mode` | | **Removed 2026-10-20** with the LED app. Both answer `not_available` for good. |
 | `sound.tone` | `{hz, ms}` | `{hz, ms}` (returns once the tone has started) |
 | `light.read` | `{}` | `{raw, percent}` (CYD LDR on GPIO 34) |
 | `sensors.read` | `{}` | `{sensors:[{name, kind, value, unit}]}`, e.g. `{"name":"AHT20","kind":"temperature","value":21.4,"unit":"C"}` |

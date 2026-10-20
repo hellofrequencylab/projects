@@ -146,13 +146,9 @@ source published if builds are distributed.
   Any CLI command except nav/option calls `backToMenu()`, so `sensors` typed
   while the screen is open prints, then exits the screen. Not yet hardware-tested.
 - `cyd_pins.h` — the CYD's own extras (RGB LED 4/16/17, LDR 34, speaker 26), shared
-  by the four apps below. Bruce's CYD build drives none of them (`RGB_LED=-1`, no
+  by Light and Sound (and their remote commands). Bruce's CYD build drives none of them (`RGB_LED=-1`, no
   `BUZZ_PIN`/`HAS_NS4168_SPKR`, no LDR code). Pins are the common CYD schematic,
   **not yet confirmed on this unit**; LED polarity and LDR direction are constants there.
-- `led/` — **LED**: onboard RGB LED on LEDC PWM (colour picker, rainbow cycle,
-  breathe, presets, off). Attaches at 5 kHz/8 bit to share the backlight's LEDC
-  timer: never retune it. A picked colour stays lit after exit; animations stop.
-  CLI: `led <r> <g> <b>` / `led off`.
 - `light/` — **Light**: LDR meter on GPIO34 (ADC1, 0 dB attenuation, 8-sample
   average): big %, raw/mV/min/max, rainbow bar, scrolling history. CLI: `light`.
 - `sound/` — **Sound**: LEDC square wave on GPIO26 (test tone, unicorn jingle,
