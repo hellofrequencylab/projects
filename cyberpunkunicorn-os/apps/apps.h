@@ -7,17 +7,21 @@
 #include "hat/HatMenu.h"
 #include "lightshow/LightShowMenu.h"
 #include "slideshow/SlideshowMenu.h"
+#include "weather/WeatherMenu.h"
+#include "weather/weather.h"
 
 // Members of MainMenu (one instance per app).
 #define CYBER_APP_MEMBERS                                                                         \
     HatMenu hatMenu;                                                                              \
     LightShowMenu lightShowMenu;                                                                  \
-    SlideshowMenu slideshowMenu;
+    SlideshowMenu slideshowMenu;                                                                  \
+    WeatherMenu weatherMenu;
 
 // Pointers listed first in the main menu, in this order.
-#define CYBER_APP_MENU_ITEMS &lightShowMenu, &slideshowMenu, &hatMenu,
+#define CYBER_APP_MENU_ITEMS &lightShowMenu, &slideshowMenu, &weatherMenu, &hatMenu,
 
 inline void cyberAppsCreateCommands(SimpleCLI *cli) {
     createHatCommand(cli);
     createSlideshowCommand(cli);
+    createWeatherCommand(cli);
 }
