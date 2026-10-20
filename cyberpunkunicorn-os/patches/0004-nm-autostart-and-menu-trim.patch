@@ -1,0 +1,41 @@
+diff --git a/src/core/config.h b/src/core/config.h
+index bd3cde1..1fd3993 100644
+--- a/src/core/config.h
++++ b/src/core/config.h
+@@ -81,7 +81,11 @@ public:
+     std::set<String> mifareKeys = {};
+ 
+     // Misc
++#ifdef NM_STARTUP_APP
++    String startupApp = NM_STARTUP_APP; // nm-rf-hat: boot straight into this app (boot.conf STARTUP_APP)
++#else
+     String startupApp = "";
++#endif
+     String startupAppJSInterpreterFile = "";
+     String wigleBasicToken = "";
+     String wdgwarsApiKey = "your 64-char hex key from wdgwars.pl/profile";
+@@ -91,7 +95,12 @@ public:
+     uint16_t badUSBBLEKeyDelay = 10;
+     bool badUSBBLEShowOutput = true;
+ 
++#ifdef NM_TRIM_MENUS
++    // nm-rf-hat: hide menus for hardware the board lacks (boot.conf TRIM_UNUSED_MENUS)
++    std::vector<String> disabledMenus = {"FM", "LoRa", "Ethernet"};
++#else
+     std::vector<String> disabledMenus = {};
++#endif
+ 
+     std::vector<QrCodeEntry> qrCodes = {
+         {"Bruce AP",   "WIFI:T:WPA;S:BruceNet;P:brucenet;;"},
+diff --git a/src/core/serial_commands/settings_commands.cpp b/src/core/serial_commands/settings_commands.cpp
+index 9c26f28..c85f7d9 100644
+--- a/src/core/serial_commands/settings_commands.cpp
++++ b/src/core/serial_commands/settings_commands.cpp
+@@ -88,6 +88,7 @@ uint32_t settingsCallback(cmd *c) {
+     if (setting_name == "wdgwarsApiKey") bruceConfig.setWdgwarsApiKey(setting_value);
+     if (setting_name == "devMode") bruceConfig.setDevMode(setting_value.toInt());
+     if (setting_name == "disabledMenus") bruceConfig.addDisabledMenu(setting_value);
++    if (setting_name == "startupApp") bruceConfig.setStartupApp(setting_value); // nm-rf-hat
+ 
+     return true;
+ }

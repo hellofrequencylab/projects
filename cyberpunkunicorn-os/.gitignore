@@ -1,0 +1,6 @@
+.bruce/
+.venv/
+build/
+build.log
+backups/
+__pycache__/

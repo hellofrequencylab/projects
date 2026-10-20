@@ -1,0 +1,69 @@
+diff --git a/include/precompiler_flags.h b/include/precompiler_flags.h
+index d8942a0..43e0586 100644
+--- a/include/precompiler_flags.h
++++ b/include/precompiler_flags.h
+@@ -273,3 +273,12 @@
+ #ifndef DEEPSLEEP_PIN_ACT
+ #define DEEPSLEEP_PIN_ACT LOW
+ #endif
++
++// cyberpunkunicorn OS identity. build.sh passes the real values; these
++// defaults keep a plain Bruce build compiling.
++#ifndef OS_NAME
++#define OS_NAME "Bruce"
++#endif
++#ifndef OS_VERSION
++#define OS_VERSION BRUCE_VERSION
++#endif
+diff --git a/src/core/display.cpp b/src/core/display.cpp
+index 3b4f210..cffde57 100644
+--- a/src/core/display.cpp
++++ b/src/core/display.cpp
+@@ -938,7 +938,7 @@ void drawStatusBar() {
+         tft.print(timeStr);
+     } else {
+         setTftDisplay(12, 12, bruceConfig.priColor, 1, bruceConfig.bgColor);
+-        tft.print("BRUCE " + String(BRUCE_VERSION));
++        tft.print(String(OS_NAME) + " " + OS_VERSION);
+     }
+ 
+     int iconCount = 0;
+diff --git a/src/core/serial_commands/util_commands.cpp b/src/core/serial_commands/util_commands.cpp
+index fc3718e..1c12e87 100644
+--- a/src/core/serial_commands/util_commands.cpp
++++ b/src/core/serial_commands/util_commands.cpp
+@@ -105,7 +105,8 @@ uint32_t freeCallback(cmd *c) {
+ }
+ 
+ uint32_t infoCallback(cmd *c) {
+-    serialDevice->print("Bruce v");
++    serialDevice->println(String(OS_NAME) + "\u2122 v" + OS_VERSION);
++    serialDevice->print("Based on Bruce v");
+     serialDevice->println(BRUCE_VERSION);
+     serialDevice->println(GIT_COMMIT_HASH);
+     serialDevice->print("SDK: ");
+@@ -133,8 +134,9 @@ uint32_t infoCallback(cmd *c) {
+ }
+ 
+ uint32_t helpCallback(cmd *c) {
+-    serialDevice->print("Bruce v");
++    serialDevice->print(String(OS_NAME) + "\u2122 v" + OS_VERSION + " (Bruce v");
+     serialDevice->print(BRUCE_VERSION);
++    serialDevice->print(")");
+     serialDevice->print("\nThese shell commands are defined internally.\n");
+ 
+     serialDevice->println("\nWiFi Commands:");
+diff --git a/src/core/utils.cpp b/src/core/utils.cpp
+index 932725b..d7e6898 100644
+--- a/src/core/utils.cpp
++++ b/src/core/utils.cpp
+@@ -159,7 +159,8 @@ void updateTimeStr(struct tm timeInfo) {
+ void showDeviceInfo() {
+     ScrollableTextArea area = ScrollableTextArea("DEVICE INFO");
+ 
+-    area.addLine("Bruce Version: " + String(BRUCE_VERSION));
++    area.addLine(String(OS_NAME) + " v" + OS_VERSION);
++    area.addLine("Based on Bruce: " + String(BRUCE_VERSION));
+     area.addLine("EEPROM size: " + String(EEPROMSIZE));
+     area.addLine("");
+     area.addLine("[MEMORY]");

@@ -9,6 +9,7 @@ self-contained project: its own toolchain, its own build command, its own
 | [`flipper/`](flipper/) | Flipper Zero apps (`.fap`, C, ufbt) | `cd flipper/apps/<app> && ufbt` |
 | [`aio-board/`](aio-board/) | AIO Board V1.4 expansion hardware (ESP32-S2, CC1101, nRF24) | firmware TBD; hardware canon only |
 | [`nm-rf-hat/`](nm-rf-hat/) | Custom Bruce firmware for CYD (ESP32-2432S028) + NM-RF-HAT | `cd nm-rf-hat && ./build.sh` |
+| [`cyberpunkunicorn-os/`](cyberpunkunicorn-os/) | CyberUnicorn 5000™: our own OS for CYD + NM-RF-HAT (Bruce-based, rainbow skin, custom apps, sensor hub) | `cd cyberpunkunicorn-os && ./build.sh` |
 | [`unicorn-os-circuitpython/`](unicorn-os-circuitpython/) | Unicorn OS: CircuitPython launcher for Feather ESP32-S3 TFT + 8x8 LED panel (archive; being ported to C++) | none; copy `launcher/` to CIRCUITPY |
 
 ## Adding a project
