@@ -1,5 +1,6 @@
 #include "hooks.h"
 
+#include "hardware/hardware.h"
 #include "net/net.h"
 #include "remote/remote.h"
 #include "core/display.h"
@@ -12,7 +13,10 @@ bool cyberAppsHandleLine(const String &line, bool &result) {
     return false;
 }
 
-void cyberAppsBoot() { remote::boot(); }
+void cyberAppsBoot() {
+    hw::boot(); // first hat probe: sorts apps into the main menu or the Library
+    remote::boot();
+}
 
 void cyberAppsWifiJoined() {
     String detail;

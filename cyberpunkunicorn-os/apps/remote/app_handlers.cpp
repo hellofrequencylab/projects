@@ -1,4 +1,4 @@
-// Remote commands for the apps that landed on other branches (LED, Sound, Light,
+// Remote commands for the apps that landed on other branches (Sound, Light,
 // Sensors, Frequency), wired in at merge time. Contract: apps/remote/PROTOCOL.md.
 // These run on the CLI task: no drawing, and every blocking wait is bounded.
 #include "remote.h"
@@ -7,22 +7,9 @@
 #include "../frequency/backend.h"
 #include "../frequency/card.h"
 #include "../frequency/store.h"
-#include "../led/LedMenu.h"
 #include "../sensors/sensor_hub.h"
 
 namespace {
-
-// ---- led.set {r,g,b} -------------------------------------------------------------
-
-void cmdLedSet(remote::Request &r) {
-    int c[3] = {r.args["r"] | -1, r.args["g"] | -1, r.args["b"] | -1};
-    for (int v : c)
-        if (v < 0 || v > 255) return r.fail("bad_args", "r, g and b are 0-255");
-    cydLedSet(c[0], c[1], c[2]);
-    r.data["r"] = c[0];
-    r.data["g"] = c[1];
-    r.data["b"] = c[2];
-}
 
 // ---- sound.tone {hz, ms} ---------------------------------------------------------
 
@@ -165,7 +152,6 @@ void cmdScan(remote::Request &r) {
 
 } // namespace
 
-REMOTE_COMMAND("led.set", cmdLedSet);
 REMOTE_COMMAND("sound.tone", cmdSoundTone);
 REMOTE_COMMAND("light.read", cmdLightRead);
 REMOTE_COMMAND("sensors.read", cmdSensorsRead);

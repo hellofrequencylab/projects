@@ -60,7 +60,7 @@ out (LoRa, Ethernet, FM are already hidden in the menu but still compiled in).
 | Bluetooth LE | — | BLE (Bruce) | exists |
 | ESP-NOW | — | **Sensors** receiver (own callback; coexists with Bruce `core/connect` by being modal) | built, untested |
 | Display + touch | — | system | exists |
-| RGB LED | 4/16/17 *(verify)*, disabled in Bruce's CYD build | **LED** (`apps/led`, CLI `led`) | built, driven directly on LEDC; not yet run on the board |
+| RGB LED | 4/16/17 *(verify)*, disabled in Bruce's CYD build | none | LED app removed 2026-10-20 (Daniel: not needed). Pins stay undriven |
 | Light sensor (LDR) | GPIO34 *(verify)* | **Light** meter (`apps/light`, CLI `light`) | built; not yet run on the board |
 | Speaker | GPIO26 *(verify)*, not enabled in Bruce's CYD build | **Sound** (`apps/sound`, CLI `tone`) | built; not yet run on the board |
 | microSD | SPI + CS5 | Files (Bruce) | exists; card currently not mounting (fake 2 TB card) |

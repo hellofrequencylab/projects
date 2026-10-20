@@ -1,0 +1,79 @@
+diff --git a/src/core/main_menu.cpp b/src/core/main_menu.cpp
+index 9662e38..150a91a 100644
+--- a/src/core/main_menu.cpp
++++ b/src/core/main_menu.cpp
+@@ -12,14 +12,14 @@ MainMenu::MainMenu() {
+         &bleMenu,
+         &rfMenu,
+         &nrf24Menu,
+-#if !defined(LITE_VERSION)
++#if !defined(LITE_VERSION) && !defined(CU_TRIM_ABSENT_HW)
+         &loraMenu,
+ #endif
+-#if defined(FM_SI4713) && !defined(LITE_VERSION)
++#if defined(FM_SI4713) && !defined(LITE_VERSION) && !defined(CU_TRIM_ABSENT_HW)
+         &fmMenu,
+ #endif
+         &irMenu,
+-#if !defined(LITE_VERSION)
++#if !defined(LITE_VERSION) && !defined(CU_TRIM_ABSENT_HW)
+         &ethernetMenu,
+ #endif
+         &gpsMenu,
+diff --git a/src/core/main_menu.h b/src/core/main_menu.h
+index af86096..20e981a 100644
+--- a/src/core/main_menu.h
++++ b/src/core/main_menu.h
+@@ -27,7 +27,9 @@ public:
+     ClockMenu clockMenu;
+     ConnectMenu connectMenu;
+     ConfigMenu configMenu;
++#if !defined(CU_TRIM_ABSENT_HW) // CyberUnicorn: no Si4713 on the CYD
+     FMMenu fmMenu;
++#endif
+     GpsMenu gpsMenu;
+     IRMenu irMenu;
+     NRF24Menu nrf24Menu;
+@@ -37,7 +39,7 @@ public:
+     ScriptsMenu scriptsMenu;
+     WifiMenu wifiMenu;
+     CYBER_APP_MEMBERS
+-#if !defined(LITE_VERSION)
++#if !defined(LITE_VERSION) && !defined(CU_TRIM_ABSENT_HW) // CyberUnicorn: no LoRa / W5500
+     LoRaMenu loraMenu;
+     EthernetMenu ethernetMenu;
+ #endif
+diff --git a/src/core/menu_items/RFIDMenu.cpp b/src/core/menu_items/RFIDMenu.cpp
+index 0df6478..9a9ab83 100644
+--- a/src/core/menu_items/RFIDMenu.cpp
++++ b/src/core/menu_items/RFIDMenu.cpp
+@@ -40,11 +40,13 @@ void RFIDMenu::optionsMenu() {
+     }
+     options.push_back({"Write NDEF", [=]() { TagOMatic(TagOMatic::WRITE_NDEF_MODE); }});
+ #endif
++#if !defined(CU_TRIM_ABSENT_HW) // CyberUnicorn: external NFC gadgets we don't have
+ #ifndef LITE_VERSION
+     options.push_back({"Amiibolink", [=]() { Amiibo(); }});
+ #endif
+     options.push_back({"Chameleon", [=]() { Chameleon(); }});
+-#ifndef LITE_VERSION
++#endif
++#if !defined(LITE_VERSION) && !defined(CU_TRIM_ABSENT_HW)
+     options.push_back({"PN532 BLE", [=]() { Pn532ble(); }});
+ #if !defined(REMOVE_RFID_HW_INTERFACE) // Remove Hardware interface menu due to lack of external GPIO
+     options.push_back({"PN532 UART", [=]() { PN532KillerTools(); }});
+diff --git a/src/core/startup_app.cpp b/src/core/startup_app.cpp
+index 18d9e35..d653925 100644
+--- a/src/core/startup_app.cpp
++++ b/src/core/startup_app.cpp
+@@ -29,8 +29,10 @@ StartupApp::StartupApp() {
+     _startupApps["Unicornagotchi"] = []() { brucegotchi_start(); };
+     _startupApps["Sniffer"] = []() { sniffer_setup(); };
+     _startupApps["GPS Tracker"] = []() { GPSTracker(); };
++#if !defined(CU_TRIM_ABSENT_HW)
+     _startupApps["PN532 BLE"] = []() { Pn532ble(); };
+     _startupApps["PN532 UART"] = []() { PN532KillerTools(); };
++#endif
+ #endif
+     _startupApps["Clock"] = []() { runClockLoop(); };
+     _startupApps["Custom SubGHz"] = []() { sendCustomRF(); };

@@ -36,6 +36,9 @@ struct HatProbeResult {
 };
 
 HatProbeResult probeHat();
+// allowSpi = false: I2C scan only, never drives 22/27 as SPI or reads the RX line
+// (the boot probe's early tries, while a PN532 may still be waking).
+HatProbeResult probeHat(bool allowSpi);
 
 // The most recent probeHat() result and its millis() timestamp; false if none yet.
 // Lets status screens report the hat without driving the shared pins again.
