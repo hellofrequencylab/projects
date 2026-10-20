@@ -54,6 +54,15 @@ source published if builds are distributed.
 ## Our apps (`apps/`, copied to `src/cyber_apps/`)
 
 - `apps.h` — registry: menu members, menu order, CLI commands. Add new apps here.
+- `frequency/` — **Frequency**, NFC tool for the Frequency loyalty platform
+  (frequency-web). Programs + verifies venue check-in (`/n/…?s=v1…`) and event
+  (`/q/…?m=nfc`) tags on the PN532, optional permanent NTAG lock, write log
+  `/frequency/written.csv`, pick list `/frequency/tags.txt` (SD or LittleFS).
+  Member scan / issue card use a **proposed** device API that frequency-web
+  doesn't have yet (off by default; contract in `apps/frequency/BACKEND.md`).
+  NVS namespace `frequency`. CLI: `frequency status|read|tag|tags|log|scan|issue|queue|config`.
+  Uses Bruce's `PN532` (`read()`, `write_ndef()` with `rawNdefRecord`, since
+  `buildNdefMessage` caps URIs at 99 chars). Not yet tested with real tags.
 - `hat/` — **Hat**: probes which hat module is live (I2C 0x24 for PN532, CC1101
   PARTNUM/VERSION, nRF24 SETUP_AW, RX-pin noise for IR/433). CLI: `hat`.
   Verified: PN532 detected with DIP 3 on. IR/433 is a heuristic — unverified.
