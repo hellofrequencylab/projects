@@ -12,6 +12,7 @@
 #include "sound/SoundMenu.h"
 #include "slideshow/SlideshowMenu.h"
 #include "weather/WeatherMenu.h"
+#include "weather/weather.h" // declares createWeatherCommand
 #include "hat/HatMenu.h"
 #include "gpio/GpioMenu.h"
 #include "remote/RemoteMenu.h"
