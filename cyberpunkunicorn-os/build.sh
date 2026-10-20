@@ -104,6 +104,7 @@ export PLATFORMIO_BUILD_FLAGS="-DOS_NAME='\"$OS_NAME\"' -DOS_VERSION='\"$OS_VERS
 # One build at a time per machine: Bruce's patch.py edits libnet80211.a in the
 # shared ~/.platformio cache, so parallel builds (e.g. several worktrees) corrupt it.
 LOCK="$HOME/.platformio/.cyberunicorn-build.lock" # next to the shared cache it protects
+mkdir -p "$(dirname "$LOCK")" # a fresh machine (or CI runner) has no ~/.platformio yet
 until mkdir "$LOCK" 2>/dev/null; do
   echo "Another CyberUnicorn build holds $LOCK (pid $(cat "$LOCK/pid" 2>/dev/null)); waiting..." >&2
   if [[ -f "$LOCK/pid" ]] && ! kill -0 "$(cat "$LOCK/pid")" 2>/dev/null; then rm -rf "$LOCK"; continue; fi
