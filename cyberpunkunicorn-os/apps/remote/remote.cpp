@@ -288,9 +288,11 @@ void emit(const char *name, JsonObjectConst data) {
     JsonDocument doc;
     doc["event"] = name;
     doc["data"] = data;
-    String line = "\n@evt "; // leading \n: never glued onto someone else's partial line
-    serializeJson(doc, line);
-    line += "\n";
+    // ArduinoJson 7's serializeJson(doc, String&) overwrites the string, so build
+    // the JSON on its own and prefix it afterwards.
+    String json;
+    serializeJson(doc, json);
+    String line = "\n@evt " + json + "\n"; // leading \n: never glued onto someone else's partial line
     // Events go to USB always, and to the phone on BLE when that's on.
     writeLine(&USBserial, line);
     if (bleSerialActive() && bleConnected() > 0) writeLine(serialDevice, line);
@@ -340,9 +342,9 @@ bool handleLine(const String &raw) {
         }
     }
 
-    String reply = "\n@rpc "; // leading \n: see emit()
-    serializeJson(out, reply);
-    reply += "\n";
+    String json;
+    serializeJson(out, json); // overwrites, never appends (ArduinoJson 7): see emit()
+    String reply = "\n@rpc " + json + "\n"; // leading \n: see emit()
     // A command that switched Bluetooth off (cli.run "remote ble off") has no link
     // left to answer on.
     if (dev == &USBserial || bleEnabled()) writeLine(dev, reply);
