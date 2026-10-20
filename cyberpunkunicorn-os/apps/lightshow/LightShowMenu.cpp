@@ -342,18 +342,18 @@ void LightShowMenu::run() {
     Settings s;
     s.load();
 
-    // Pins 22/27 are shared with the hat: refuse to fight a powered module.
-    if (s.pin == 22 || s.pin == 27) {
+    // Pins 22/27 are shared with the hat: with a module powered, don't drive the
+    // pin; the show still plays on screen.
+    int pin = s.pin;
+    String screenOnly;
+    if (pin == 22 || pin == 27) {
         HatProbeResult hp = probeHat();
         if (hp.pn532 || hp.cc1101 || hp.nrf24) {
-            JsonDocument ev;
-            ev["message"] = hp.summary() + " is on. Turn DIP 1-5 OFF for the LED panel.";
-            remote::emit("lightshow.error", ev.as<JsonObjectConst>());
-            displayWarning(hp.summary() + " is on. Turn DIP 1-5 OFF for the LED panel.", true);
-            return;
+            screenOnly = "Screen only: " + hp.summary() + " is on (DIP 1-5 OFF for LEDs)";
+            pin = -1;
         }
     }
-    bool hasPanel = panel.begin(s.pin);
+    bool hasPanel = panel.begin(pin);
     rs.reqIndex = -1;
     rs.reqLevel = -1;
     rs.reqStop = false;
@@ -366,9 +366,12 @@ void LightShowMenu::run() {
 
     Layout l = layout();
     drawStatic(l, s);
-    if (!hasPanel && s.pin >= 0) {
+    if (!hasPanel && pin >= 0) {
         tft.setTextColor(TFT_RED, bruceConfig.bgColor);
         tft.drawString("LED pin init failed", l.px, l.gy + 150, 1);
+    } else if (screenOnly.length()) {
+        tft.setTextColor(TFT_DARKGREY, bruceConfig.bgColor);
+        tft.drawString(screenOnly, l.px, l.gy + 150, 1);
     }
 
     RGB buf[N * N];

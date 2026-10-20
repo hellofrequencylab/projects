@@ -100,8 +100,8 @@ source published if builds are distributed.
   CLI: `remote [ble on|off] [boot on|off]`. Android must open the CH340 with DTR/RTS
   off. BLE replies are split to MTU−3 per notification. Not yet tested on hardware.
 - `hardware/` — **Library** + hardware registry (`hardware.h`). Apps with a hardware
-  rule (`NEEDS` in `hardware.cpp`: Frequency/RFID → PN532; RF → CC1101 or 433;
-  NRF24; IR; Sensors → I2C sensor or node; Sound → speaker; Light Show → LED panel;
+  rule (`NEEDS` in `hardware.cpp`: Frequency (pinned: always shown)/RFID → PN532; RF → CC1101 or 433;
+  NRF24; IR; Sensors → I2C sensor or node; Sound → speaker; Light Show → LED panel, pinned;
   GPS, LoRa, Ethernet, FM) stay out of the main menu until a part is present, and
   wait in the Library app. Present = detected by any `probeHat()` (it calls
   `hw::ingestProbe`) and **sticky** in NVS `cyberhw` (`seen`, `marked`), so flipping the
@@ -127,7 +127,8 @@ source published if builds are distributed.
   in a Claude scratch workspace, not this repo). Driver: core 3.3.9 RMT
   (`rmtInit`/`rmtWrite`, rgbLedWrite timings). Settings in NVS namespace
   `lightshow` (pin, zigzag, rotate, level, scene). Default data pin **27** (Grove
-  SDA): needs DIP 1-5 OFF, and the app refuses to start if a hat module answers.
+  SDA): needs DIP 1-5 OFF; if a hat module answers it plays on screen only. Pinned
+  in the main menu (no LED panel needed).
   Panel V+ needs its own 5 V; brightness capped at 40%. Not yet tested with a panel.
   Remote: `lightshow.state` / `lightshow.set` leave requests in a shared struct the
   show loop reads each frame; a remote start goes through `forceMenuOption`, so it

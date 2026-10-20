@@ -25,7 +25,8 @@ const PartInfo PARTS[HW_PART_COUNT] = {
 };
 
 // Apps that need hardware. Anything not listed is always in the main menu.
-// Frequency is pinned: it's the flagship and stays page 1 even with no PN532 found.
+// Pinned apps always stay in the main menu: Frequency is the flagship (page 1 even
+// with no PN532 found) and Light Show plays on screen with no LED panel.
 const AppNeed NEEDS[] = {
     {"Frequency",  uint16_t(1u << HW_PN532), true                    },
     {"RFID",       uint16_t(1u << HW_PN532)                          },
@@ -34,7 +35,7 @@ const AppNeed NEEDS[] = {
     {"IR",         uint16_t(1u << HW_IR)                             },
     {"Sensors",    uint16_t((1u << HW_I2C_SENSOR) | (1u << HW_SENSOR_NODE))},
     {"Sound",      uint16_t(1u << HW_SPEAKER)                        },
-    {"Light Show", uint16_t(1u << HW_LED_PANEL)                      },
+    {"Light Show", uint16_t(1u << HW_LED_PANEL), true                }, // plays on screen without one
     {"GPS",        uint16_t(1u << HW_GPS)                            },
     {"LoRa",       uint16_t(1u << HW_LORA)                           },
     {"Ethernet",   uint16_t(1u << HW_ETHERNET)                       },

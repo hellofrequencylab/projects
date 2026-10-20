@@ -264,9 +264,8 @@ as `lightshow.state`, plus `"starting":true` when it asked the UI to open the sh
   exactly like the buttons. `running:false` stops the show and returns to the menu.
 - While stopped, scene and level are saved for the next start. `running:true` opens
   Light Show on the device's UI. This works **only from the main menu**: otherwise
-  `busy` (send `screen.nav esc` a few times to get back to the main menu, then retry). The show
-  may still refuse to start if a hat module is powered on its data pin. It then
-  emits `lightshow.error` and shows a warning on screen.
+  `busy` (send `screen.nav esc` a few times to get back to the main menu, then retry). If a hat module
+  is powered on its data pin, the show plays on screen only (the pin isn't driven).
 - Scene names match case-insensitively. Level steps are 4/8/15/25/40 % brightness.
 
 ### Wi-Fi (`apps/net/`)
@@ -313,7 +312,7 @@ this table when it registers its handler.
 | event | data | when |
 |---|---|---|
 | `lightshow.state` | same as `lightshow.state` | show starts, stops, or changes scene/level (buttons or remote) |
-| `lightshow.error` | `{message}` | the show refused to start |
+| `lightshow.error` | `{message}` | reserved; not sent since Light Show plays on screen only when the hat owns its pin |
 | `wifi.joining` | `{}` | `wifi.join` started (it can take up to 30 s) |
 | `spectrum` | same as `spectrum.read` | each sweep (max 4/s) while streaming and the Spectrum screen is open |
 
