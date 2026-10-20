@@ -7,6 +7,7 @@
 #include "core/scrollableTextArea.h"
 #include "core/utils.h"
 #include "remote.h"
+#include "relay.h"
 #include <globals.h>
 
 namespace {
@@ -38,6 +39,7 @@ void RemoteMenu::optionsMenu() {
         {("Bluetooth now: " + onOff(remote::bleEnabled())).c_str(), []() { setBle(!remote::bleEnabled()); }},
         {("Bluetooth at boot: " + onOff(remote::bleAtBoot())).c_str(),
          []() { remote::setBleAtBoot(!remote::bleAtBoot()); }},
+        {("Internet remote: " + onOff(relay::enabled())).c_str(), []() { relay::setEnabled(!relay::enabled()); }},
         {"How to connect", [this]() { showHelp(); }},
     };
     addOptionToMainMenu();
@@ -79,6 +81,9 @@ void RemoteMenu::showStatus() {
         tft.drawString("USB  serial 115200, always on", x, y, 1);
         tft.setTextColor(cyberHue(280), bruceConfig.bgColor);
         tft.drawString("BLE  " + ble + (remote::bleAtBoot() ? "  [boot]" : ""), x, y + 12, 1);
+        tft.setTextColor(cyberHue(120), bruceConfig.bgColor);
+        tft.fillRect(x, y + 36, w, 10, bruceConfig.bgColor);
+        tft.drawString("NET  internet remote " + String(relay::stateText(relay::state())), x, y + 36, 1);
         tft.setTextColor(cyberHue(40), bruceConfig.bgColor);
         tft.drawString(
             "RAM  " + String(ESP.getFreeHeap() / 1024) + " KB free, " + String(count) + " cmds", x, y + 24, 1
@@ -87,7 +92,7 @@ void RemoteMenu::showStatus() {
         if (count != lastCount || ble != lastBle) {
             lastCount = count;
             lastBle = ble;
-            int ly = y + 46;
+            int ly = y + 58;
             tft.fillRect(x, ly, w, tftHeight - 22 - ly, bruceConfig.bgColor);
             cyberRainbowText("RECENT", x, ly, cyberPhase(), bruceConfig.bgColor);
             remote::LogEntry e[8];
@@ -141,11 +146,17 @@ static uint32_t remoteCallback(cmd *c) {
         if (!remote::bleSetEnabled(value == "on")) serialDevice->println("Not enough free RAM for Bluetooth");
     } else if (what == "boot" && (value == "on" || value == "off")) {
         remote::setBleAtBoot(value == "on");
+    } else if (what == "relay" && (value == "on" || value == "off")) {
+        relay::setEnabled(value == "on");
     } else if (what.length()) {
-        serialDevice->println("usage: remote [ble on|off] [boot on|off]");
+        serialDevice->println("usage: remote [ble on|off] [boot on|off] [relay on|off]");
         return false;
     }
     serialDevice->println("Bluetooth: " + bleLine() + ", at boot " + onOff(remote::bleAtBoot()));
+    serialDevice->println(
+        "Internet remote: " + String(relay::stateText(relay::state())) +
+        (relay::lastError().length() ? " (" + relay::lastError() + ")" : String(""))
+    );
     serialDevice->println("Free heap: " + String(ESP.getFreeHeap()) + " bytes");
     serialDevice->println("Commands: " + String(remote::commandCount()));
     remote::LogEntry e[8];

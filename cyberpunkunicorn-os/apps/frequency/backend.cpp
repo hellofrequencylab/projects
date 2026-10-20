@@ -1,5 +1,6 @@
 #include "backend.h"
 
+#include "../remote/relay.h"
 #include "../remote/remote.h"
 #include "store.h"
 #include <ArduinoJson.h>
@@ -64,6 +65,7 @@ ApiStatus post(const String &path, const JsonDocument &req, Response &res, Strin
     while (base.endsWith("/")) base.remove(base.length() - 1);
     String url = base + path;
 
+    relay::yieldTls(); // two TLS sessions don't fit in RAM beside the UI
     WiFiClientSecure tls;
     WiFiClient plain; // http:// is allowed for a dev server on the LAN only
     tls.setInsecure(); // TODO: pin the CA once a production device API exists
