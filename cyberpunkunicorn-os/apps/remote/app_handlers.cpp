@@ -134,9 +134,13 @@ void cmdWriteTag(remote::Request &r) {
     if (!u.ok) return r.fail("bad_url", u.problem.length() ? u.problem : String("not a Frequency URL"));
     freq::CardInfo card;
     if (!tap(r, card)) return;
-    freq::CardStatus s = freq::writeCard(u.fixed, card);
+    // A phone or bank card answers the tap but can't hold a link: say so, not "No card".
+    freq::CardStatus s = card.ntag ? freq::writeCard(u.fixed, card) : freq::CARD_NOT_NTAG;
     freq::readerClose();
-    if (s != freq::CARD_OK) return r.fail("write_failed", freq::cardStatusText(s));
+    if (s != freq::CARD_OK) {
+        Serial.printf("[freq] write: %s (tapped %s, %s)\n", freq::cardStatusText(s), card.type.c_str(), card.uid.c_str());
+        return r.fail("write_failed", freq::cardStatusText(s));
+    }
     freq::logWrite(label, u, card.uid, false);
     putCard(r.data, card);
     r.data["written"] = u.host + u.path; // no query: the signature stays out of logs
