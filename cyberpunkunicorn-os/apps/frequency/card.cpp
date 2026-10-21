@@ -132,6 +132,30 @@ String parseNdefUri(const std::vector<uint8_t> &mem) {
     return "";
 }
 
+// Send a command and read its whole answer before the next one goes out.
+// Adafruit's setPassiveActivationRetries() never reads the answer and its
+// SAMConfig() reads without waiting for it. An answer left in the chip is then
+// read in place of the next command's ACK, so every later poll counts as
+// "no ack" and the reader looks dead (2026-10-21: firmware version answered,
+// then every card search failed).
+bool command(uint8_t *cmd, uint8_t len) {
+    auto &nfc = rfid->nfc;
+    if (!nfc.sendCommandCheckAck(cmd, len)) return false;
+    if (!nfc.waitready(100)) return false;
+    uint8_t reply[9]; // 00 00 FF LEN LCS D5 CMD+1 DCS 00
+    nfc.readdata(reply, sizeof(reply));
+    return reply[5] == 0xD5 && reply[6] == uint8_t(cmd[0] + 1);
+}
+
+// A command the chip has not answered yet (a card search that ran past its
+// wait) is cancelled by sending it an ACK frame (PN532 user manual 6.2.1.3), so
+// its late answer can't be read as the next command's ACK.
+void abortCommand() {
+    static const uint8_t ack[] = {0x00, 0x00, 0xFF, 0x00, 0xFF, 0x00};
+    if (rfid->nfc.i2c_dev) rfid->nfc.i2c_dev->write(ack, sizeof(ack));
+    delay(2);
+}
+
 // A reliable "is a card in the field" check. Bruce's read() reads the
 // InListPassiveTarget answer without waiting for the PN532 to be ready, so on
 // its own it misses cards now and then; waiting for RDY here first fixes that.
@@ -146,6 +170,7 @@ bool selectCard(uint16_t waitMs) {
     }
     if (!rfid->nfc.waitready(waitMs)) {
         stats.noAnswer++;
+        abortCommand();
         return false;
     }
     if (!rfid->nfc.readDetectedPassiveTargetID()) {
@@ -210,10 +235,15 @@ bool startReader() {
         // The PN532 is rated to 400 kHz but clock-stretches; 100 kHz is what Bruce's own NFC tools use.
         acquireI2CBus()->setClock(100000);
         if (!commandsAnswered()) continue;
-        rfid->nfc.SAMConfig();
+        // Normal mode, 1 s timeout, IRQ pin (as Adafruit's SAMConfig()).
+        uint8_t sam[] = {PN532_COMMAND_SAMCONFIGURATION, 0x01, 0x14, 0x01};
         // Answer "no tag" after a few tries instead of waiting forever, so a poll
-        // never leaves a command pending in the chip.
-        rfid->nfc.setPassiveActivationRetries(0x05);
+        // never leaves a command pending in the chip (RFConfiguration item 5).
+        uint8_t retries[] = {PN532_COMMAND_RFCONFIGURATION, 0x05, 0xFF, 0x01, 0x05};
+        bool samOk = command(sam, sizeof(sam));
+        bool retriesOk = command(retries, sizeof(retries));
+        Serial.printf("[freq] PN532 setup: SAM %s, retries %s\n", samOk ? "ok" : "failed", retriesOk ? "ok" : "failed");
+        if (!samOk || !retriesOk) continue;
         return true;
     }
     return false;
