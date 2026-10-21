@@ -76,6 +76,14 @@ venv is enough:
 Confirmed working: SDK **1.4.3**, target **f7**, API **87.1**, `darwin-x86_64`
 toolchain downloads and builds cleanly.
 
+The Flipper itself (2026-10-21) runs **Momentum mntm-012**, API **87.1**, so `.fap`s
+built against release SDK 1.4.3 load on it. Check with `device_info` in `ufbt cli`
+(`firmware_api_major/minor`) before trusting that after either side updates.
+
+`ufbt launch` on an app that switches USB to dual CDC (like `apps/frequency`)
+ends with `read failed: Device not configured`. That is the USB re-enumerating,
+not a failed launch: the app is running.
+
 ## Build / run loop
 
     cd apps/<app>
