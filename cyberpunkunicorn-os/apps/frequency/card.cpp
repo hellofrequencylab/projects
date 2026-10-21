@@ -344,7 +344,8 @@ CardStatus waitCard(
 CardStatus writeCard(const String &uri, CardInfo &out) {
     if (!held || !rfid) return CARD_NO_READER;
     CardInfo before;
-    if (!selectCard(200) || readFull() != RFIDInterface::SUCCESS) return CARD_NONE;
+    // The card was just seen: losing it here is a slipped card, not an empty reader.
+    if (!selectCard(200) || readFull() != RFIDInterface::SUCCESS) return CARD_WRITE_FAILED;
     fill(before);
     if (!before.ntag) return CARD_NOT_NTAG;
     if (before.locked) return CARD_LOCKED;
