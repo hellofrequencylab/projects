@@ -181,6 +181,22 @@ bool selectCard(uint16_t waitMs) {
     return true;
 }
 
+// A card that just answered stays ACTIVE and ignores the next select, so
+// selecting it again straight away finds "No card" (0.1.5 logs: the tap saw the
+// sticker, the write's select a moment later got nothing). Let the PN532 drop
+// it and turn the field off and on: the card powers up IDLE and answers.
+bool selectAgain(uint16_t waitMs) {
+    uint8_t release[] = {0x52, 0x00}; // InRelease, all targets
+    uint8_t off[] = {PN532_COMMAND_RFCONFIGURATION, 0x01, 0x00};
+    uint8_t on[] = {PN532_COMMAND_RFCONFIGURATION, 0x01, 0x01};
+    command(release, sizeof(release));
+    command(off, sizeof(off));
+    delay(10);
+    command(on, sizeof(on));
+    delay(5);
+    return selectCard(waitMs);
+}
+
 // The card is selected; read it, selecting it again if a page read dropped.
 // SUCCESS once any select worked, as Bruce's read() did: a tag whose pages
 // can't be read (not an NTAG) is still a tag, and fill() says what it is.
@@ -189,7 +205,7 @@ int readFull() {
     for (int i = 0; i < 3; i++) {
         if (i) {
             delay(15);
-            if (!selectCard(200)) continue;
+            if (!selectAgain(200)) continue;
         }
         seen = true;
         rfid->readSelected(); // patch 0019: reads on from this select
@@ -345,7 +361,7 @@ CardStatus writeCard(const String &uri, CardInfo &out) {
     if (!held || !rfid) return CARD_NO_READER;
     CardInfo before;
     // The card was just seen: losing it here is a slipped card, not an empty reader.
-    if (!selectCard(200) || readFull() != RFIDInterface::SUCCESS) return CARD_WRITE_FAILED;
+    if (!selectAgain(200) || readFull() != RFIDInterface::SUCCESS) return CARD_WRITE_FAILED;
     fill(before);
     if (!before.ntag) return CARD_NOT_NTAG;
     if (before.locked) return CARD_LOCKED;
@@ -360,7 +376,7 @@ CardStatus writeCard(const String &uri, CardInfo &out) {
     int r = RFIDInterface::FAILURE;
     for (int i = 0; i < 4 && r != RFIDInterface::SUCCESS; i++) {
         // write_ndef() would select again without waiting for RDY (patch 0019).
-        if (!selectCard(200)) {
+        if (!selectAgain(200)) {
             delay(20);
             continue;
         }
@@ -372,7 +388,7 @@ CardStatus writeCard(const String &uri, CardInfo &out) {
     if (r == RFIDInterface::TAG_NOT_MATCH) return CARD_NOT_NTAG;
     if (r != RFIDInterface::SUCCESS) return CARD_WRITE_FAILED;
 
-    if (!selectCard(200) || readFull() != RFIDInterface::SUCCESS) return CARD_VERIFY_FAILED;
+    if (!selectAgain(200) || readFull() != RFIDInterface::SUCCESS) return CARD_VERIFY_FAILED;
     fill(out);
     if (out.uid != before.uid || out.uri != uri) return CARD_VERIFY_FAILED;
     flashSuccess(); // no speaker on this board: the light says it worked
@@ -382,7 +398,7 @@ CardStatus writeCard(const String &uri, CardInfo &out) {
 CardStatus lockCard(const String &expectUid) {
     if (!held || !rfid) return CARD_NO_READER;
     CardInfo now;
-    if (!selectCard(200) || readFull() != RFIDInterface::SUCCESS) return CARD_NONE;
+    if (!selectAgain(200) || readFull() != RFIDInterface::SUCCESS) return CARD_NONE;
     fill(now);
     if (!now.ntag) return CARD_NOT_NTAG;
     if (now.uid != expectUid) return CARD_VERIFY_FAILED; // a different tag got swapped in
@@ -396,7 +412,7 @@ CardStatus lockCard(const String &expectUid) {
     uint8_t st[4] = {mem[8], mem[9], 0xFF, 0xFF};
     if (!rfid->nfc.ntag2xx_WritePage(dyn, d)) return CARD_WRITE_FAILED;
     if (!rfid->nfc.ntag2xx_WritePage(2, st)) return CARD_WRITE_FAILED;
-    if (!selectCard(200) || readFull() != RFIDInterface::SUCCESS) return CARD_VERIFY_FAILED;
+    if (!selectAgain(200) || readFull() != RFIDInterface::SUCCESS) return CARD_VERIFY_FAILED;
     fill(now);
     return now.locked ? CARD_OK : CARD_VERIFY_FAILED;
 }
