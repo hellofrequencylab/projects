@@ -1,0 +1,11 @@
+App(
+    appid="frequency",
+    name="Frequency",
+    apptype=FlipperAppType.EXTERNAL,
+    entry_point="frequency_app",
+    stack_size=4 * 1024,
+    fap_category="NFC",
+    fap_description="Lets the Frequency CyberUnicorn console write and read NTAG check-in tags over USB.",
+    fap_author="hellofrequencylab",
+    fap_version=(0, 1),
+)
