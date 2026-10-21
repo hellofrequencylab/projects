@@ -47,6 +47,15 @@ CardStatus waitCard(
     const std::function<void()> &idle = nullptr
 );
 
+// How the reader's selects ended since resetPollStats(), so a timeout can say
+// whether the PN532 never answered (noAck / noAnswer: the reader or its bus)
+// or answered "no card" every time (noCard: nothing in its field).
+struct PollStats {
+    uint32_t polls = 0, noAck = 0, noAnswer = 0, noCard = 0, selected = 0;
+};
+void resetPollStats();
+PollStats pollStats();
+
 // Write `uri` as the tag's only NDEF record, then read it back. `out` is the
 // verified tag.
 CardStatus writeCard(const String &uri, CardInfo &out);

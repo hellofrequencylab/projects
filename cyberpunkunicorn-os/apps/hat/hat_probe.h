@@ -38,6 +38,14 @@ struct HatProbeResult {
     String advice() const;  // what to do next
 };
 
+// Pins 22/27 have one owner at a time: the card reader (frequency/card.cpp) from
+// readerOpen() to readerClose(), or a probe for its scan. Recursive, so the owner
+// may probe. The UI and the remote command task run on different cores; without
+// this a menu's rescan tore the I2C bus down under a tag being read.
+bool hatBusTake(uint32_t waitMs);
+void hatBusGive();
+
+// While another task owns the bus, returns the last result without touching it.
 HatProbeResult probeHat();
 // allowSpi = false: I2C scan only, never drives 22/27 as SPI or reads the RX line
 // (the boot probe's early tries, while a PN532 may still be waking).

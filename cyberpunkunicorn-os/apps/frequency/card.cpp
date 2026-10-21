@@ -134,10 +134,24 @@ String parseNdefUri(const std::vector<uint8_t> &mem) {
 // A reliable "is a card in the field" check. Bruce's read() reads the
 // InListPassiveTarget answer without waiting for the PN532 to be ready, so on
 // its own it misses cards now and then; waiting for RDY here first fixes that.
+// Where each select stopped since the last resetPollStats() (pollStats()).
+PollStats stats;
+
 bool selectCard(uint16_t waitMs) {
-    if (!rfid->nfc.startPassiveTargetIDDetection(PN532_MIFARE_ISO14443A)) return false;
-    if (!rfid->nfc.waitready(waitMs)) return false;
-    if (!rfid->nfc.readDetectedPassiveTargetID()) return false;
+    stats.polls++;
+    if (!rfid->nfc.startPassiveTargetIDDetection(PN532_MIFARE_ISO14443A)) {
+        stats.noAck++;
+        return false;
+    }
+    if (!rfid->nfc.waitready(waitMs)) {
+        stats.noAnswer++;
+        return false;
+    }
+    if (!rfid->nfc.readDetectedPassiveTargetID()) {
+        stats.noCard++;
+        return false;
+    }
+    stats.selected++;
     return true;
 }
 
@@ -173,6 +187,10 @@ void fill(CardInfo &out) {
 
 } // namespace
 
+void resetPollStats() { stats = PollStats(); }
+
+PollStats pollStats() { return stats; }
+
 const char *cardStatusText(CardStatus s) {
     switch (s) {
         case CARD_OK: return "OK";
@@ -190,6 +208,11 @@ const char *cardStatusText(CardStatus s) {
 
 CardStatus readerOpen() {
     if (xSemaphoreTake(readerMutex(), 0) != pdTRUE) return CARD_BUSY;
+    // Wait out a probe running on the other task (a menu's rescan, ~0.3 s).
+    if (!hatBusTake(600)) {
+        xSemaphoreGive(readerMutex());
+        return CARD_BUSY;
+    }
     held = true;
     HatProbeResult hat = probeHat();
     if (!hat.pn532) {
@@ -211,6 +234,7 @@ CardStatus readerOpen() {
 void readerClose() {
     if (!held) return;
     held = false;
+    hatBusGive();
     xSemaphoreGive(readerMutex());
 }
 

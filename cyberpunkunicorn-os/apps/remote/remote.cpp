@@ -253,6 +253,9 @@ void cmdCliRun(Request &r) {
     line.trim();
     if (line.isEmpty()) return r.fail("bad_args", "line is required");
     if (line.startsWith("rpc")) return r.fail("bad_args", "cli.run can't run rpc");
+    // The screen stream keeps the device that started it (patch 0020): a capture
+    // device lives only for this call.
+    if (line.startsWith("display")) return r.fail("bad_args", "send `display start` as a plain line, not cli.run");
 
     CaptureDevice cap;
     SerialDevice *prev = serialDevice;
