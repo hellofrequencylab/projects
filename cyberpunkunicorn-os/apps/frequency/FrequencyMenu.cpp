@@ -110,6 +110,10 @@ bool openReader(bool &anyway) {
     for (;;) {
         CardStatus s = readerOpen();
         if (s == CARD_OK) return true;
+        if (s == CARD_READER_STUCK) {
+            notice("FREQUENCY", "READER STUCK", cardStatusText(s), "Unplug the board for 10 s, DIP 3 only.");
+            return false;
+        }
         if (s != CARD_NO_READER) {
             notice("FREQUENCY", "READER BUSY", cardStatusText(s), "Close the other screen or serial command.");
             return false;
@@ -118,6 +122,12 @@ bool openReader(bool &anyway) {
         if (c == 1) anyway = true;
         if (c != 0) return false;
     }
+}
+
+// A wait that ended because the reader stopped taking commands says so.
+void stuckNotice(CardStatus s) {
+    if (s == CARD_READER_STUCK)
+        notice("FREQUENCY", "READER STUCK", cardStatusText(s), "Unplug the board for 10 s, DIP 3 only.");
 }
 
 bool openReader() {
@@ -285,7 +295,10 @@ int writeLoop(const String &label, const UrlCheck &u) {
                 cyberAnimate();
             }
         );
-        if (s != CARD_OK) return written;
+        if (s != CARD_OK) {
+            stuckNotice(s);
+            return written;
+        }
 
         CardInfo done;
         s = writeCard(u.fixed, done);
@@ -520,7 +533,8 @@ void home() {
         );
         if (s != CARD_OK) {
             readerClose();
-            if (k == K_ESC || returnToMenu) return;
+            stuckNotice(s);
+            if (k == K_ESC || returnToMenu || s == CARD_READER_STUCK) return;
             if (!menu()) return;
             continue;
         }
@@ -597,7 +611,10 @@ void issueMemberCard() {
                 cyberAnimate();
             }
         );
-        if (s != CARD_OK) break;
+        if (s != CARD_OK) {
+            stuckNotice(s);
+            break;
+        }
         s = writeCard(u.fixed.length() ? u.fixed : r.url, done);
         if (s != CARD_OK) {
             notice("ISSUE CARD", "TRY AGAIN", writeProblem(s), "", "any key: try again", 4000);

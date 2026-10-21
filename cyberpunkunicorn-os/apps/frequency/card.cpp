@@ -4,6 +4,7 @@
 #include "modules/rfid/PN532.h"
 
 #include "../hat/hat_probe.h"
+#include "core/bus_HAL.h"
 #include "card.h"
 #include "flash.h"
 #include <freertos/semphr.h>
@@ -185,6 +186,44 @@ void fill(CardInfo &out) {
     out.uri = parseNdefUri(mem);
 }
 
+// A PN532 can ACK its I2C address and still never take a command: every
+// transfer then runs into Wire's timeout (0.1.3 logs: 43 polls in 30 s, all
+// "no ack"). Ask for the firmware version, the one command with a fixed answer;
+// if it doesn't come, free the bus (9-clock recovery), start it again and ask
+// once more.
+bool commandsAnswered() {
+    uint32_t v = rfid->nfc.getFirmwareVersion();
+    // On serial, so the website's device log shows whether the chip took a command at all.
+    Serial.printf("[freq] PN532 firmware %s (0x%08lX)\n", v ? "answered" : "did not answer", (unsigned long)v);
+    return v != 0;
+}
+
+bool startReader() {
+    for (int attempt = 0; attempt < 2; attempt++) {
+        if (attempt) {
+            Serial.println("[freq] reader not answering commands; recovering the I2C bus");
+            releaseI2CBus(); // Wire must be off 22/27 while the lines are clocked by hand
+            hatI2CRecover();
+            delay(50);
+            if (!rfid->begin()) continue;
+        }
+        // The PN532 is rated to 400 kHz but clock-stretches; 100 kHz is what Bruce's own NFC tools use.
+        acquireI2CBus()->setClock(100000);
+        if (!commandsAnswered()) continue;
+        rfid->nfc.SAMConfig();
+        // Answer "no tag" after a few tries instead of waiting forever, so a poll
+        // never leaves a command pending in the chip.
+        rfid->nfc.setPassiveActivationRetries(0x05);
+        return true;
+    }
+    return false;
+}
+
+// Polls in a row that got no ACK. A few of them means the reader stopped taking
+// commands mid-wait; one recovery, then give up instead of spinning to the timeout.
+constexpr int STUCK_AFTER = 4;
+int noAckRun = 0;
+
 } // namespace
 
 void resetPollStats() { stats = PollStats(); }
@@ -202,6 +241,7 @@ const char *cardStatusText(CardStatus s) {
         case CARD_LOCKED: return "Tag is write-locked";
         case CARD_WRITE_FAILED: return "Write failed - hold still";
         case CARD_VERIFY_FAILED: return "Verify failed";
+        case CARD_READER_STUCK: return "Reader not answering - unplug 10 s";
     }
     return "?";
 }
@@ -224,10 +264,10 @@ CardStatus readerOpen() {
         readerClose();
         return CARD_NO_READER;
     }
-    rfid->nfc.SAMConfig();
-    // Answer "no tag" after a few tries instead of waiting forever, so a poll
-    // never leaves a command pending in the chip.
-    rfid->nfc.setPassiveActivationRetries(0x05);
+    if (!startReader()) {
+        readerClose();
+        return CARD_READER_STUCK;
+    }
     return CARD_OK;
 }
 
@@ -252,9 +292,18 @@ CardStatus waitCard(
     CardInfo &out, uint32_t timeoutMs, const std::function<bool()> &cancel, const std::function<void()> &idle
 ) {
     uint32_t start = millis();
+    noAckRun = 0;
+    bool recovered = false;
     for (;;) {
+        uint32_t acksBefore = stats.noAck;
         CardStatus s = pollCard(out);
         if (s != CARD_NONE) return s;
+        noAckRun = stats.noAck != acksBefore ? noAckRun + 1 : 0;
+        if (noAckRun >= STUCK_AFTER) {
+            if (recovered || !startReader()) return CARD_READER_STUCK;
+            recovered = true;
+            noAckRun = 0;
+        }
         if (cancel && cancel()) return CARD_NONE;
         if (timeoutMs && millis() - start > timeoutMs) return CARD_NONE;
         if (idle) idle();

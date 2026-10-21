@@ -87,22 +87,34 @@ void putCard(JsonObject o, const freq::CardInfo &c) {
 bool tap(remote::Request &r, freq::CardInfo &card) {
     freq::CardStatus s = freq::readerOpen();
     if (s != freq::CARD_OK) {
-        r.fail(s == freq::CARD_NO_READER ? "no_reader" : "busy", freq::cardStatusText(s));
+        r.fail(
+            s == freq::CARD_NO_READER      ? "no_reader"
+            : s == freq::CARD_READER_STUCK ? "reader_stuck"
+                                           : "busy",
+            freq::cardStatusText(s)
+        );
         return false;
     }
     uint32_t timeout = r.args["timeout_ms"] | TAP_TIMEOUT_MS;
     if (timeout > 30000) timeout = 30000;
     remote::emit("frequency.waiting_for_tag", JsonObjectConst());
     freq::resetPollStats();
+    uint32_t started = millis();
     s = freq::waitCard(card, timeout, [] { return false; });
     if (s != freq::CARD_OK) {
         freq::readerClose();
         // What the reader did meanwhile, for the website's device log.
         freq::PollStats p = freq::pollStats();
         String why = String(freq::cardStatusText(s)) + " (" + p.polls + " polls: " + p.noCard + " no card, " +
-                     p.noAck + " no ack, " + p.noAnswer + " no answer, " + p.selected + " seen)";
+                     p.noAck + " no ack, " + p.noAnswer + " no answer, " + p.selected + " seen, " +
+                     (millis() - started) + " ms)";
         Serial.println("[freq] " + why);
-        r.fail(s == freq::CARD_NONE ? "timeout" : "card_error", why);
+        r.fail(
+            s == freq::CARD_NONE           ? "timeout"
+            : s == freq::CARD_READER_STUCK ? "reader_stuck"
+                                           : "card_error",
+            why
+        );
         return false;
     }
     return true;
