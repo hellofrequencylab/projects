@@ -20,6 +20,7 @@ enum CardStatus {
     CARD_LOCKED,        // already write-locked
     CARD_WRITE_FAILED,
     CARD_VERIFY_FAILED, // wrote, but read back something else
+    CARD_READER_STUCK,  // PN532 answers its address but not commands, even after a bus recovery
 };
 const char *cardStatusText(CardStatus s);
 

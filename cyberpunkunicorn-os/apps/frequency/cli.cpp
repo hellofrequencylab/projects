@@ -44,8 +44,9 @@ void printTag(const CardInfo &c) {
 
 bool waitTag(CardInfo &c, uint32_t timeout) {
     out("Tap a tag (" + String(timeout) + " ms)...");
-    if (waitCard(c, timeout, nullptr) == CARD_OK) return true;
-    out("No tag.");
+    CardStatus s = waitCard(c, timeout, nullptr);
+    if (s == CARD_OK) return true;
+    out(s == CARD_READER_STUCK ? String("ERROR: ") + cardStatusText(s) : String("No tag."));
     return false;
 }
 

@@ -239,6 +239,11 @@ SemaphoreHandle_t hatBus() {
 }
 } // namespace
 
+bool hatI2CRecover() {
+    recoverI2C();
+    return linesIdle();
+}
+
 bool hatBusTake(uint32_t waitMs) { return xSemaphoreTakeRecursive(hatBus(), pdMS_TO_TICKS(waitMs)) == pdTRUE; }
 
 void hatBusGive() { xSemaphoreGiveRecursive(hatBus()); }

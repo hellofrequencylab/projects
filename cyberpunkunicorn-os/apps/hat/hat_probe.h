@@ -45,6 +45,10 @@ struct HatProbeResult {
 bool hatBusTake(uint32_t waitMs);
 void hatBusGive();
 
+// Clocks a chip stuck mid-byte off SDA (the standard 9-clock recovery) and says
+// whether both lines then idle high. Call with no Wire instance running on 22/27.
+bool hatI2CRecover();
+
 // While another task owns the bus, returns the last result without touching it.
 HatProbeResult probeHat();
 // allowSpi = false: I2C scan only, never drives 22/27 as SPI or reads the RX line
