@@ -214,6 +214,7 @@ void cmdSystemStatus(Request &r) {
         if (hp.pn532) live.add("pn532");
         if (hp.irLikely) live.add("ir");
         if (hp.ookLikely) live.add("ook433");
+        if (hp.i2cStuck) hat["i2c_stuck"] = true;
         hat["probed_s_ago"] = (millis() - at) / 1000;
     } else {
         hat["probed_s_ago"] = nullptr; // never probed this boot: run hat.probe
@@ -273,6 +274,7 @@ void cmdHatProbe(Request &r) {
     r.data["pn532"] = hp.pn532;
     JsonArray other = r.data["i2c_other"].to<JsonArray>();
     for (uint8_t a : hp.i2cOther) other.add(a);
+    r.data["i2c_stuck"] = hp.i2cStuck;
     r.data["cc1101"] = hp.cc1101;
     r.data["cc_partnum"] = hp.ccPartnum;
     r.data["cc_version"] = hp.ccVersion;

@@ -71,6 +71,12 @@ User-tunable values go in `boot.conf` → `-D` macros via `PLATFORMIO_BUILD_FLAG
   FM, LoRa and Ethernet menus and the PN532 BLE/UART, Chameleon and Amiibolink RFID
   options (the CYD + hat have none of them; about 208 KB). build.sh refuses a
   `STARTUP_APP` of "PN532 BLE"/"PN532 UART" while it is on
+- `0018` lossless screen stream: while `display start` is on, every draw goes to the
+  serial queue (waiting up to 50 ms for room) before the log's de-duplication, so the
+  website's live screen gets whole frames instead of fragments
+- `0019` PN532 `readSelected()` / `writeNdefSelected()`: read or write the card the
+  caller already selected (Frequency's card.cpp waits for RDY; Bruce's own read()
+  re-selects without waiting and could miss a tag held still)
 
 (No 0002: the nm-rf-hat cat scene was dropped for the unicorn.) Macros in 0003–0004
 keep their `NM_` prefix from `nm-rf-hat/`; renaming them is churn.

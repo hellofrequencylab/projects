@@ -206,7 +206,7 @@ Bruce's `serialDevice` for a buffer while the command runs. Limits:
  "live_count":1,"summary":"PN532 (DIP 3)","advice":"Ready."}
 ```
 
-All `HatProbeResult` fields (snake_case) plus `live_count`, `summary`, `advice`.
+All `HatProbeResult` fields (snake_case) plus `live_count`, `summary`, `advice`. `i2c_stuck` true means SDA or SCL was held low or an address timed out (usually a wedged PN532): the scan stopped early, SPI was skipped, and only a power cycle clears it.
 `busy` while Light Show runs, since the probe would drive the LED pin. Takes up to ~1 s.
 
 ### `hardware.list` *

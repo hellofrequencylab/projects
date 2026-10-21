@@ -5,6 +5,7 @@
 
 #include "../hat/hat_probe.h"
 #include "card.h"
+#include "flash.h"
 #include <freertos/semphr.h>
 #include <vector>
 
@@ -140,15 +141,21 @@ bool selectCard(uint16_t waitMs) {
     return true;
 }
 
-// Bruce's read(), retried: we already know a card is there.
+// The card is selected; read it, selecting it again if a page read dropped.
+// SUCCESS once any select worked, as Bruce's read() did: a tag whose pages
+// can't be read (not an NTAG) is still a tag, and fill() says what it is.
 int readFull() {
-    int r = RFIDInterface::TAG_NOT_PRESENT;
-    for (int i = 0; i < 4; i++) {
-        r = rfid->read();
-        if (r == RFIDInterface::SUCCESS) return r;
-        delay(15);
+    bool seen = false;
+    for (int i = 0; i < 3; i++) {
+        if (i) {
+            delay(15);
+            if (!selectCard(200)) continue;
+        }
+        seen = true;
+        rfid->readSelected(); // patch 0019: reads on from this select
+        if (rfid->pageReadSuccess || rfid->uid.sak != PN532::PICC_TYPE_MIFARE_UL) break;
     }
-    return r;
+    return seen ? RFIDInterface::SUCCESS : RFIDInterface::TAG_NOT_PRESENT;
 }
 
 void fill(CardInfo &out) {
@@ -209,7 +216,9 @@ void readerClose() {
 
 CardStatus pollCard(CardInfo &out) {
     if (!held || !rfid) return CARD_NO_READER;
-    if (!selectCard(40)) return CARD_NONE;
+    // 150 ms: long enough for the PN532's "no card" answer after its 5 tries, so
+    // the next poll never talks over a command still running.
+    if (!selectCard(150)) return CARD_NONE;
     if (readFull() != RFIDInterface::SUCCESS) return CARD_NONE;
     fill(out);
     return CARD_OK;
@@ -246,7 +255,12 @@ CardStatus writeCard(const String &uri, CardInfo &out) {
     }
     int r = RFIDInterface::FAILURE;
     for (int i = 0; i < 4 && r != RFIDInterface::SUCCESS; i++) {
-        r = rfid->write_ndef();
+        // write_ndef() would select again without waiting for RDY (patch 0019).
+        if (!selectCard(200)) {
+            delay(20);
+            continue;
+        }
+        r = rfid->writeNdefSelected();
         if (r == RFIDInterface::TAG_NOT_MATCH) break;
         if (r != RFIDInterface::SUCCESS) delay(20);
     }
@@ -257,6 +271,7 @@ CardStatus writeCard(const String &uri, CardInfo &out) {
     if (!selectCard(200) || readFull() != RFIDInterface::SUCCESS) return CARD_VERIFY_FAILED;
     fill(out);
     if (out.uid != before.uid || out.uri != uri) return CARD_VERIFY_FAILED;
+    flashSuccess(); // no speaker on this board: the light says it worked
     return CARD_OK;
 }
 

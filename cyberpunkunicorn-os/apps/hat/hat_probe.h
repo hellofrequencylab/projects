@@ -11,6 +11,9 @@ struct HatProbeResult {
     // PN532 (DIP 3) and anything else on the Grove I2C bus (SDA 27 / SCL 22).
     bool pn532 = false;
     std::vector<uint8_t> i2cOther; // addresses that ACKed, excluding the PN532
+    // SDA or SCL stayed low, or an address timed out: something (usually a wedged
+    // PN532) is holding the bus. The scan stopped there and SPI was not tried.
+    bool i2cStuck = false;
 
     // CC1101 (DIP 1): PARTNUM / VERSION status registers.
     bool cc1101 = false;
