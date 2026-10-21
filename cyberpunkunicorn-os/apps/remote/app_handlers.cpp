@@ -93,10 +93,16 @@ bool tap(remote::Request &r, freq::CardInfo &card) {
     uint32_t timeout = r.args["timeout_ms"] | TAP_TIMEOUT_MS;
     if (timeout > 30000) timeout = 30000;
     remote::emit("frequency.waiting_for_tag", JsonObjectConst());
+    freq::resetPollStats();
     s = freq::waitCard(card, timeout, [] { return false; });
     if (s != freq::CARD_OK) {
         freq::readerClose();
-        r.fail(s == freq::CARD_NONE ? "timeout" : "card_error", freq::cardStatusText(s));
+        // What the reader did meanwhile, for the website's device log.
+        freq::PollStats p = freq::pollStats();
+        String why = String(freq::cardStatusText(s)) + " (" + p.polls + " polls: " + p.noCard + " no card, " +
+                     p.noAck + " no ack, " + p.noAnswer + " no answer, " + p.selected + " seen)";
+        Serial.println("[freq] " + why);
+        r.fail(s == freq::CARD_NONE ? "timeout" : "card_error", why);
         return false;
     }
     return true;

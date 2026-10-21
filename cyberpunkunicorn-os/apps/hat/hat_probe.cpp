@@ -232,6 +232,17 @@ String HatProbeResult::advice() const {
     return "Ready.";
 }
 
+namespace {
+SemaphoreHandle_t hatBus() {
+    static SemaphoreHandle_t m = xSemaphoreCreateRecursiveMutex();
+    return m;
+}
+} // namespace
+
+bool hatBusTake(uint32_t waitMs) { return xSemaphoreTakeRecursive(hatBus(), pdMS_TO_TICKS(waitMs)) == pdTRUE; }
+
+void hatBusGive() { xSemaphoreGiveRecursive(hatBus()); }
+
 static HatProbeResult lastResult;
 static uint32_t lastAt = 0;
 static bool haveLast = false;
@@ -239,6 +250,7 @@ static bool haveLast = false;
 HatProbeResult probeHat() { return probeHat(true); }
 
 HatProbeResult probeHat(bool allowSpi) {
+    if (!hatBusTake(0)) return lastResult; // the reader is in use elsewhere: report what we last saw
     HatProbeResult r;
     probeI2C(r);
     if (!r.pn532 && !r.i2cStuck) {
@@ -257,6 +269,7 @@ HatProbeResult probeHat(bool allowSpi) {
     lastResult = r;
     lastAt = millis();
     haveLast = true;
+    hatBusGive();
     hw::ingestProbe(r); // keeps the Library / main menu in step with what is plugged in
     return r;
 }
