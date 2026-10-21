@@ -1,0 +1,46 @@
+diff --git a/src/core/tftLogger/tftLogger.cpp b/src/core/tftLogger/tftLogger.cpp
+index 21efac8..dd24085 100644
+--- a/src/core/tftLogger/tftLogger.cpp
++++ b/src/core/tftLogger/tftLogger.cpp
+@@ -78,6 +78,11 @@ void tft_logger::setLogging(bool _log) {
+     if (log) memset(log, 0, sizeof(tftLog) * MAX_LOG_ENTRIES);
+     logCount = 0;
+ };
++// CyberUnicorn: the link that sent `display start`. serialDevice is the BLE serial
++// whenever the Bluetooth API is on, and switches to USB only while a USB command
++// runs, so the stream went to the phone and reached the cable in torn pieces.
++static SerialDevice *asyncSerialDev = nullptr;
++
+ void tft_logger::asyncSerialTaskFunc(void *pv) {
+     tft_logger *logger = static_cast<tft_logger *>(pv);
+     tftLog item;
+@@ -88,7 +93,7 @@ void tft_logger::asyncSerialTaskFunc(void *pv) {
+             if (fn == DRAWIMAGE) {
+                 if (!logger->images) {
+                     uint8_t size = entry[1];
+-                    serialDevice->write(entry, size);
++                    asyncSerialDev->write(entry, size);
+                     continue;
+                 }
+                 uint8_t imageSlot = entry[12];
+@@ -100,10 +105,10 @@ void tft_logger::asyncSerialTaskFunc(void *pv) {
+                 if (imgLen > MAX_LOG_SIZE - baseLen) imgLen = MAX_LOG_SIZE - baseLen;
+                 memcpy(packet + baseLen, imgPath, imgLen);
+                 packet[1] = baseLen + imgLen;
+-                serialDevice->write(packet, baseLen + imgLen);
++                asyncSerialDev->write(packet, baseLen + imgLen);
+             } else {
+                 uint8_t size = entry[1];
+-                serialDevice->write(entry, size);
++                asyncSerialDev->write(entry, size);
+             }
+         }
+     }
+@@ -117,6 +122,7 @@ void tft_logger::asyncSerialTaskFunc(void *pv) {
+ 
+ void tft_logger::startAsyncSerial() {
+     if (async_serial) return;
++    asyncSerialDev = serialDevice;
+     async_serial = true;
+     setLogging(true);
+     asyncSerialQueue = xQueueCreate(MAX_LOG_ENTRIES, sizeof(tftLog));

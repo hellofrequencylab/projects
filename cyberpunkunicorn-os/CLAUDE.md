@@ -77,6 +77,8 @@ User-tunable values go in `boot.conf` → `-D` macros via `PLATFORMIO_BUILD_FLAG
 - `0019` PN532 `readSelected()` / `writeNdefSelected()`: read or write the card the
   caller already selected (Frequency's card.cpp waits for RDY; Bruce's own read()
   re-selects without waiting and could miss a tag held still)
+- `0020` the screen stream writes to the link that sent `display start`, not to
+  `serialDevice` (the BLE serial whenever Bluetooth is on), so the cable gets every frame
 
 (No 0002: the nm-rf-hat cat scene was dropped for the unicorn.) Macros in 0003–0004
 keep their `NM_` prefix from `nm-rf-hat/`; renaming them is churn.
