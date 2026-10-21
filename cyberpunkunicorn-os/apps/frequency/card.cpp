@@ -141,18 +141,6 @@ bool selectCard(uint16_t waitMs) {
     return true;
 }
 
-// Reads the card selectCard() just found. Bruce's read() and write_ndef() send
-// InListPassiveTarget again and read the answer without waiting for RDY (over
-// I2C nothing waits), so with a tag held still they could fail every retry and
-// the tag was never seen. Here the select already waited; read on from it.
-int readSelected() {
-    rfid->format_data();
-    rfid->set_uid();
-    rfid->pageReadStatus = rfid->read_data_blocks();
-    rfid->pageReadSuccess = rfid->pageReadStatus == RFIDInterface::SUCCESS;
-    return RFIDInterface::SUCCESS;
-}
-
 // The card is selected; read it, selecting it again if a page read dropped.
 // SUCCESS once any select worked, as Bruce's read() did: a tag whose pages
 // can't be read (not an NTAG) is still a tag, and fill() says what it is.
@@ -164,7 +152,7 @@ int readFull() {
             if (!selectCard(200)) continue;
         }
         seen = true;
-        readSelected();
+        rfid->readSelected(); // patch 0019: reads on from this select
         if (rfid->pageReadSuccess || rfid->uid.sak != PN532::PICC_TYPE_MIFARE_UL) break;
     }
     return seen ? RFIDInterface::SUCCESS : RFIDInterface::TAG_NOT_PRESENT;
@@ -267,13 +255,12 @@ CardStatus writeCard(const String &uri, CardInfo &out) {
     }
     int r = RFIDInterface::FAILURE;
     for (int i = 0; i < 4 && r != RFIDInterface::SUCCESS; i++) {
-        // write_ndef() would re-select without waiting (see readSelected()).
+        // write_ndef() would select again without waiting for RDY (patch 0019).
         if (!selectCard(200)) {
             delay(20);
             continue;
         }
-        rfid->set_uid();
-        r = rfid->write_ndef_blocks();
+        r = rfid->writeNdefSelected();
         if (r == RFIDInterface::TAG_NOT_MATCH) break;
         if (r != RFIDInterface::SUCCESS) delay(20);
     }

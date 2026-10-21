@@ -1,0 +1,26 @@
+diff --git a/src/modules/rfid/PN532.h b/src/modules/rfid/PN532.h
+index 4e78a91..57da318 100644
+--- a/src/modules/rfid/PN532.h
++++ b/src/modules/rfid/PN532.h
+@@ -53,6 +53,21 @@ public:
+     int save(const String &filename);
+     String emulationCaveat() const override;
+ 
++    // CyberUnicorn: read or write the card the caller has just selected and waited
++    // for (apps/frequency/card.cpp). read() and write_ndef() select it again and
++    // read the answer without waiting for RDY, which over I2C can miss every try.
++    int readSelected() {
++        format_data();
++        set_uid();
++        pageReadStatus = read_data_blocks();
++        pageReadSuccess = pageReadStatus == SUCCESS;
++        return SUCCESS;
++    }
++    int writeNdefSelected() {
++        set_uid();
++        return write_ndef_blocks();
++    }
++
+ private:
+     bool _use_i2c;
+     CONNECTION_TYPE _connection_type;
