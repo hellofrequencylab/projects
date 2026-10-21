@@ -50,22 +50,63 @@ void recoverI2C() {
     pinMode(scl, INPUT);
 }
 
+// Both lines idle high once the pull-ups have a moment. One held low means a chip
+// is stretching the clock or stuck mid-byte, and every address would time out.
+bool linesIdle() {
+    int sda = bruceConfigPins.i2c_bus.sda, scl = bruceConfigPins.i2c_bus.scl;
+    if (sda < 0 || scl < 0) return true;
+    pinMode(sda, INPUT_PULLUP);
+    pinMode(scl, INPUT_PULLUP);
+    delayMicroseconds(20);
+    bool idle = digitalRead(sda) && digitalRead(scl);
+    pinMode(sda, INPUT);
+    pinMode(scl, INPUT);
+    return idle;
+}
+
+// Per-address timeout, and the most one scan may take. An absent address NACKs in
+// well under a millisecond; Wire's own 50 ms timeout times 112 addresses, six scans
+// at boot, kept the serial task from starting until after the website gave up.
+constexpr uint16_t I2C_PROBE_TIMEOUT_MS = 10;
+constexpr uint32_t I2C_SCAN_BUDGET_MS = 250;
+constexpr uint8_t WIRE_TIMEOUT = 5; // endTransmission(): ESP_ERR_TIMEOUT
+
 void probeI2C(HatProbeResult &r) {
     recoverI2C();
-    TwoWire *wire = acquireI2CBus();
-    for (uint8_t addr = 0x08; addr < 0x78; addr++) {
-        wire->beginTransmission(addr);
-        uint8_t err = wire->endTransmission();
-        if (err != 0 && addr == PN532_I2C_ADDR) {
-            // A sleeping PN532 can NACK the address byte that wakes it: ask again.
-            delay(2);
-            wire->beginTransmission(addr);
-            err = wire->endTransmission();
-        }
-        if (err != 0) continue;
-        if (addr == PN532_I2C_ADDR) r.pn532 = true;
-        else r.i2cOther.push_back(addr);
+    if (!linesIdle()) {
+        r.i2cStuck = true;
+        return;
     }
+    TwoWire *wire = acquireI2CBus();
+    uint16_t prevTimeout = wire->getTimeOut();
+    wire->setTimeOut(I2C_PROBE_TIMEOUT_MS);
+    auto ask = [wire](uint8_t addr) {
+        wire->beginTransmission(addr);
+        return wire->endTransmission();
+    };
+
+    // The PN532 first, so a slow bus still finds the reader before the budget runs out.
+    uint8_t err = ask(PN532_I2C_ADDR);
+    if (err != 0 && err != WIRE_TIMEOUT) {
+        // A sleeping PN532 can NACK the address byte that wakes it: ask again.
+        delay(2);
+        err = ask(PN532_I2C_ADDR);
+    }
+    if (err == 0) r.pn532 = true;
+    else if (err == WIRE_TIMEOUT) r.i2cStuck = true;
+
+    uint32_t started = millis();
+    for (uint8_t addr = 0x08; addr < 0x78 && !r.i2cStuck; addr++) {
+        if (addr == PN532_I2C_ADDR) continue;
+        if (millis() - started > I2C_SCAN_BUDGET_MS) {
+            r.i2cStuck = true;
+            break;
+        }
+        err = ask(addr);
+        if (err == WIRE_TIMEOUT) r.i2cStuck = true;
+        else if (err == 0) r.i2cOther.push_back(addr);
+    }
+    wire->setTimeOut(prevTimeout);
     releaseI2CBus();
 }
 
@@ -182,6 +223,7 @@ String HatProbeResult::summary() const {
 }
 
 String HatProbeResult::advice() const {
+    if (i2cStuck) return "The card reader is holding the bus. Unplug for 10 s, DIP 3 only.";
     int n = liveCount();
     if (n == 0) return "Nothing answered. Turn ON one of DIP 1-5.";
     if (n > 1) return "More than one module is on. Only one of DIP 1-5 at a time.";
@@ -199,7 +241,7 @@ HatProbeResult probeHat() { return probeHat(true); }
 HatProbeResult probeHat(bool allowSpi) {
     HatProbeResult r;
     probeI2C(r);
-    if (!r.pn532) {
+    if (!r.pn532 && !r.i2cStuck) {
         // Ask the I2C bus once more before driving 22/27 as SPI: a PN532 that was
         // asleep answers the second time, and SPI traffic under a half-awake one
         // can wedge it until the next power cycle.
@@ -207,10 +249,11 @@ HatProbeResult probeHat(bool allowSpi) {
         r.i2cOther.clear();
         probeI2C(r);
     }
-    // The SPI radios sit on the same two pins as I2C. If the PN532 answered,
-    // driving those pins as SPI would fight it, so stop here.
-    if (allowSpi && !r.pn532) probeSPI(r);
-    if (allowSpi && r.liveCount() == 0) probeRxLine(r);
+    // The SPI radios sit on the same two pins as I2C. If the PN532 answered, or
+    // something is holding the lines, driving them as SPI would fight it: stop here.
+    if (r.i2cStuck) Serial.println("[hat] I2C bus held low or timing out; skipped the rest of the probe");
+    if (allowSpi && !r.pn532 && !r.i2cStuck) probeSPI(r);
+    if (allowSpi && !r.i2cStuck && r.liveCount() == 0) probeRxLine(r);
     lastResult = r;
     lastAt = millis();
     haveLast = true;
@@ -242,6 +285,7 @@ std::vector<String> hatReportLines(const HatProbeResult &r) {
                         " aw " + hex2(r.nrfSetupAw));
     }
     l.push_back(String("PN532   ") + (r.pn532 ? "yes" : "no") + "  (I2C 0x24)");
+    if (r.i2cStuck) l.push_back("I2C bus stuck: scan stopped early");
     if (r.rxChecked)
         l.push_back("RX pin  " + String(r.rxTransitions) + " edges, " + String(r.rxHighPercent) + "% high");
     else l.push_back("RX pin  not checked (a module already answered)");

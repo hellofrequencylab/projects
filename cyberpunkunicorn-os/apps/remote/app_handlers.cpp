@@ -6,6 +6,7 @@
 #include "../cyd_pins.h"
 #include "../frequency/backend.h"
 #include "../frequency/card.h"
+#include "../frequency/flash.h"
 #include "../frequency/store.h"
 #include "../sensors/sensor_hub.h"
 
@@ -137,6 +138,7 @@ void cmdScan(remote::Request &r) {
     if (freq::cableAvailable()) {
         freq::SignedScan sc = freq::signScan(u.token, card.uid, remote::trustedEpoch());
         freq::putRelay(r.data["relay"].to<JsonObject>(), sc);
+        freq::flashSuccess();
         return;
     }
     freq::ScanReply s = freq::postScan(u.token, card.uid);
@@ -149,6 +151,7 @@ void cmdScan(remote::Request &r) {
             return r.fail("offline", "queued; will retry when online");
         default: return r.fail("rejected", s.reason);
     }
+    freq::flashSuccess();
     r.data["member"]["display_name"] = s.name;
     r.data["zapsAwarded"] = s.zaps;
     if (s.hasLoyalty) {

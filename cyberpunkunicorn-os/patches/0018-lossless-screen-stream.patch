@@ -1,0 +1,24 @@
+diff --git a/src/core/tftLogger/tftLogger.cpp b/src/core/tftLogger/tftLogger.cpp
+index 5d6f2c8..21efac8 100644
+--- a/src/core/tftLogger/tftLogger.cpp
++++ b/src/core/tftLogger/tftLogger.cpp
+@@ -208,6 +208,11 @@ bool tft_logger::isLogEqual(const tftLog &a, const tftLog &b) {
+ 
+ void tft_logger::pushLogIfUnique(const tftLog &l) {
+     if (!log) return;
++    // CyberUnicorn: a live mirror needs every draw, in order. Before, a packet
++    // already in the log (an erase redrawn in the same colour) was never sent, and
++    // a full queue dropped the rest, so a busy screen arrived as fragments. Wait
++    // for room instead, bounded so a stalled sender can't freeze the screen.
++    if (async_serial && asyncSerialQueue) { xQueueSend(asyncSerialQueue, &l, pdMS_TO_TICKS(50)); }
+     for (int i = 0; i < logCount; i++) {
+         if (isLogEqual(log[i], l)) {
+             return; // Entry already exists
+@@ -216,7 +221,6 @@ void tft_logger::pushLogIfUnique(const tftLog &l) {
+     memcpy(log[logWriteIndex].data, l.data, l.data[1]);
+     logWriteIndex = (logWriteIndex + 1) % MAX_LOG_ENTRIES;
+     if (logCount < MAX_LOG_ENTRIES) ++logCount;
+-    if (async_serial && asyncSerialQueue) { xQueueSend(asyncSerialQueue, &l, 0); }
+ }
+ 
+ bool tft_logger::removeLogEntriesInsideRect(int rx, int ry, int rw, int rh) {
